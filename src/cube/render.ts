@@ -17,7 +17,7 @@ import {
   GfxInputLayoutBufferDescriptor,
   GfxCullMode,
   GfxVertexBufferDescriptor,
-  // GfxIndexBufferDescriptor,
+  GfxIndexBufferDescriptor,
 } from "../gfx/platform/GfxPlatform.js";
 import {
   fillColor,
@@ -34,7 +34,7 @@ import {
   // GfxRenderInstManager,
 } from "../gfx/render/GfxRenderInstManager.js";
 import { CameraController } from "../Camera.js";
-import { GfxrAttachmentSlot } from "../gfx/render/GfxRenderGraph.js";
+import { GfxrAttachmentSlot, GfxrRenderTargetDescription } from "../gfx/render/GfxRenderGraph.js";
 
 class IVProgram extends DeviceProgram {
   public static a_Position = 0;
@@ -47,12 +47,12 @@ class IVProgram extends DeviceProgram {
 precision mediump float;
 
 layout(std140) uniform ub_SceneParams {
-    Mat4x4 u_Projection;
-    Mat4x4 u_ModelView;
+  Mat4x4 u_Projection;
+  Mat4x4 u_ModelView;
 };
 
 layout(std140) uniform ub_ObjectParams {
-    vec4 u_Color;
+  vec4 u_Color;
 };
 
 varying vec2 v_LightIntensity;
@@ -62,20 +62,20 @@ layout(location = ${IVProgram.a_Position}) attribute vec3 a_Position;
 layout(location = ${IVProgram.a_Normal}) attribute vec3 a_Normal;
 
 void mainVS() {
-    const float t_ModelScale = 20.0;
-    gl_Position = Mul(u_Projection, Mul(u_ModelView, vec4(a_Position * t_ModelScale, 1.0)));
-    vec3 t_LightDirection = normalize(vec3(.2, -1, .5));
-    float t_LightIntensityF = dot(-a_Normal, t_LightDirection);
-    float t_LightIntensityB = dot( a_Normal, t_LightDirection);
-    v_LightIntensity = vec2(t_LightIntensityF, t_LightIntensityB);
+  const float t_ModelScale = 15.0;
+  gl_Position = Mul(u_Projection, Mul(u_ModelView, vec4(a_Position * t_ModelScale, 1.0)));
+  vec3 t_LightDirection = normalize(vec3(.2, -1, .5));
+  float t_LightIntensityF = dot(-a_Normal, t_LightDirection);
+  float t_LightIntensityB = dot( a_Normal, t_LightDirection);
+  v_LightIntensity = vec2(t_LightIntensityF, t_LightIntensityB);
 }
 #endif
 
 #ifdef FRAG
 void mainPS() {
-    float t_LightIntensity = gl_FrontFacing ? v_LightIntensity.x : v_LightIntensity.y;
-    float t_LightTint = 0.3 * t_LightIntensity;
-    gl_FragColor = u_Color + vec4(t_LightTint, t_LightTint, t_LightTint, 0.0);
+  float t_LightIntensity = gl_FrontFacing ? v_LightIntensity.x : v_LightIntensity.y;
+  float t_LightTint = .4 * t_LightIntensity;
+  gl_FragColor = u_Color + vec4(t_LightTint, t_LightTint, t_LightTint, 0.);
 }
 #endif
 `;
@@ -138,71 +138,52 @@ const bindingLayouts: GfxBindingLayoutDescriptor[] = [
 export class Scene implements Viewer.SceneGfx {
   private inputLayout: GfxInputLayout;
   private program: GfxProgram;
-  // private ivRenderers: IVRenderer[] = [];
   private renderHelper: GfxRenderHelper;
   private renderInstListMain = new GfxRenderInstList();
 
-  ///
-  private vertexBufferDescriptors_: GfxVertexBufferDescriptor[];
+  private vertexBuffers: GfxVertexBufferDescriptor[] | null[];
+  private indexBuffer: GfxIndexBufferDescriptor | null;
   private numVertices: number;
   private posBuffer: GfxBuffer;
   private nrmBuffer: GfxBuffer;
   private color: Color;
 
-  constructor(
-    device: GfxDevice,
-    // public ivs: IV.IV[],
-    index_array: number[],
-    vertex_array: number[],
-    color: Color,
-  ) {
+  constructor(device: GfxDevice, indices: number[], vertices: number[], normals: number[], color: Color) {
     this.color = color;
     this.renderHelper = new GfxRenderHelper(device);
     this.program = this.renderHelper.renderCache.createProgram(new IVProgram());
 
-    const vertexAttributeDescriptors: GfxVertexAttributeDescriptor[] = [
-      { location: IVProgram.a_Position, bufferIndex: 0, bufferByteOffset: 0, format: GfxFormat.F32_RGB },
-      { location: IVProgram.a_Normal, bufferIndex: 1, bufferByteOffset: 0, format: GfxFormat.F32_RGB },
-    ];
-    const vertexBufferDescriptors: GfxInputLayoutBufferDescriptor[] = [
-      { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
-      { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
-    ];
-    const indexBufferFormat: GfxFormat | null = null;
     const cache = this.renderHelper.renderCache;
     this.inputLayout = cache.createInputLayout({
-      vertexAttributeDescriptors,
-      vertexBufferDescriptors,
-      indexBufferFormat,
+      vertexAttributeDescriptors: [
+        { location: IVProgram.a_Position, bufferIndex: 0, bufferByteOffset: 0, format: GfxFormat.F32_RGB },
+        { location: IVProgram.a_Normal, bufferIndex: 1, bufferByteOffset: 0, format: GfxFormat.F32_RGB },
+      ],
+      vertexBufferDescriptors: [
+        { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
+        { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
+      ],
+      // indexBufferFormat: GfxFormat.U32_R,
+      indexBufferFormat: null
     });
 
-
-    // return new IVRenderer(device, this.inputLayout);
-
     ////////////////// ivrenderer constructor
-    // TODO(jstpierre): Coalesce chunks?
-    // this.name = "This is a name";
+    let idxData = new Uint32Array(indices);
+    // let posData = new Float32Array(vertices);
+    // let nrmData = new Float32Array(normals);
 
-    // this.chunks = this.iv.chunks.map(
-    //   (chunk) => new Chunk(device, chunk, inputLayout),
-    // );
+    let { posData, nrmData } = get_buffers(indices, vertices);
 
-    let { posData, nrmData } = get_buffers(index_array, vertex_array);
-    this.vertexBufferDescriptors_ = [
+    this.numVertices = indices.length;
+
+    this.vertexBuffers = [
       { buffer: makeStaticDataBuffer(device, GfxBufferUsage.Vertex, posData.buffer), byteOffset: 0 },
-      { buffer: makeStaticDataBuffer(device, GfxBufferUsage.Vertex, nrmData.buffer), byteOffset: 0 }
+      { buffer: makeStaticDataBuffer(device, GfxBufferUsage.Vertex, nrmData.buffer), byteOffset: 0 },
     ];
-    this.numVertices = index_array.length;
+    this.indexBuffer = { buffer: makeStaticDataBuffer(device, GfxBufferUsage.Index, idxData.buffer), byteOffset: 0 };
   }
 
-  // public adjustCameraController(c: CameraController) {
-  //   c.setSceneMoveSpeedMult(16 / 60);
-  // }
-
-  private prepareToRender(
-    device: GfxDevice,
-    viewerInput: Viewer.ViewerRenderInput
-  ): void {
+  private prepareToRender(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput): void {
     const template = this.renderHelper.pushTemplateRenderInst();
     template.setBindingLayouts(bindingLayouts);
     template.setGfxProgram(this.program);
@@ -218,29 +199,21 @@ export class Scene implements Viewer.SceneGfx {
       .renderInstManager
       .setCurrentRenderInstList(this.renderInstListMain);
 
-    // for (let i = 0; i < this.ivRenderers.length; i++)
-    //   this.ivRenderers[i].prepareToRender(this.renderHelper.renderInstManager);
-
     //////////////////// ivrenderer preparetorender
-    /// public prepareToRender(renderInstManager: GfxRenderInstManager): void {
-
-    const templateRenderInst =
-      this
-        .renderHelper
-        .renderInstManager
-        .pushTemplateRenderInst();
+    const templateRenderInst = this.renderHelper.renderInstManager.pushTemplateRenderInst();
 
     offs = templateRenderInst.allocateUniformBuffer(IVProgram.ub_ObjectParams, 4);
     const d = templateRenderInst.mapUniformBufferF32(IVProgram.ub_ObjectParams);
-    offs += fillColor(d, offs, this.color);
+    //offs += fillColor(d, offs, this.color);
+    fillColor(d, offs, this.color);
 
     ///////////////////// chunk preparetorendere
-    // for (let i = 0; i < this.chunks.length; i++)
-    // this.chunks[i].prepareToRender(renderInstManager);
-    // public prepareToRender(renderInstManager: GfxRenderInstManager): void {
     const renderInst = this.renderHelper.renderInstManager.newRenderInst();
     renderInst.setVertexInput(
-      this.inputLayout, this.vertexBufferDescriptors_, null,
+      this.inputLayout,
+      this.vertexBuffers,
+      // this.indexBuffer,
+      null,
     );
     renderInst.setDrawCount(this.numVertices);
     this.renderHelper.renderInstManager.submitRenderInst(renderInst);
@@ -254,53 +227,30 @@ export class Scene implements Viewer.SceneGfx {
   }
 
   public render(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput) {
-    const mainColorDesc = makeBackbufferDescSimple(
+    const mainColorDesc: GfxrRenderTargetDescription = makeBackbufferDescSimple(
       GfxrAttachmentSlot.Color0,
       viewerInput,
       standardFullClearRenderPassDescriptor,
     );
-    const mainDepthDesc = makeBackbufferDescSimple(
+    const mainDepthDesc: GfxrRenderTargetDescription = makeBackbufferDescSimple(
       GfxrAttachmentSlot.DepthStencil,
       viewerInput,
       standardFullClearRenderPassDescriptor,
     );
 
     const builder = this.renderHelper.renderGraph.newGraphBuilder();
-
-    const mainColorTargetID = builder.createRenderTargetID(
-      mainColorDesc,
-      "Main Color",
-    );
-    const mainDepthTargetID = builder.createRenderTargetID(
-      mainDepthDesc,
-      "Main Depth",
-    );
+    const mainColorTargetID = builder.createRenderTargetID(mainColorDesc, "Main Color");
+    const mainDepthTargetID = builder.createRenderTargetID(mainDepthDesc, "Main Depth");
     builder.pushPass((pass) => {
       pass.setDebugName("Main");
-      pass.attachRenderTargetID(
-        GfxrAttachmentSlot.Color0,
-        mainColorTargetID
-      );
-      pass.attachRenderTargetID(
-        GfxrAttachmentSlot.DepthStencil,
-        mainDepthTargetID,
-      );
+      pass.attachRenderTargetID(GfxrAttachmentSlot.Color0, mainColorTargetID);
+      pass.attachRenderTargetID(GfxrAttachmentSlot.DepthStencil, mainDepthTargetID);
       pass.exec((passRenderer) => {
-        this.renderInstListMain.drawOnPassRenderer(
-          this.renderHelper.renderCache,
-          passRenderer,
-        );
+        this.renderInstListMain.drawOnPassRenderer(this.renderHelper.renderCache, passRenderer);
       });
     });
-    this.renderHelper.antialiasingSupport.pushPasses(
-      builder,
-      viewerInput,
-      mainColorTargetID,
-    );
-    builder.resolveRenderTargetToExternalTexture(
-      mainColorTargetID,
-      viewerInput.onscreenTexture,
-    );
+    this.renderHelper.antialiasingSupport.pushPasses(builder, viewerInput, mainColorTargetID);
+    builder.resolveRenderTargetToExternalTexture(mainColorTargetID, viewerInput.onscreenTexture);
 
     this.prepareToRender(device, viewerInput);
     this.renderHelper.renderGraph.execute(builder);
@@ -308,9 +258,8 @@ export class Scene implements Viewer.SceneGfx {
   }
 
   public destroy(device: GfxDevice): void {
-    device.destroyBuffer(this.posBuffer);
-    device.destroyBuffer(this.nrmBuffer);
-    // this.ivRenderers.forEach((r) => r.destroy(device));
+    // device.destroyBuffer(this.posBuffer);
+    // device.destroyBuffer(this.nrmBuffer);
     this.renderHelper.destroy();
   }
 
