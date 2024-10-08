@@ -10,6 +10,7 @@ enum CollisionVolumeTypeEnum {
 
 }
 
+
 enum CollisionVolumeTypeEnum {
   CollisionVolumeType,
   SphereVolumeType,
@@ -25,6 +26,8 @@ enum VolAxisOrientation {
   VolAxisYOriented,
   VolAxisZOriented
 };
+
+const AXIS_ALIGNED_SNAPPING_FACTOR = 0.9999;
 
 export interface CollisionObject { // OBJECT
   //  subchunks

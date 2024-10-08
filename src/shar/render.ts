@@ -6,6 +6,7 @@ import * as Viewer from "../viewer.js";
 import * as UI from "../ui.js";
 
 import * as Fence from "./chunks/fence.js";
+import { get_buffers } from '../cube/render.js';
 
 import {
   GfxDevice,
@@ -41,6 +42,7 @@ import { GfxrAttachmentSlot } from "../gfx/render/GfxRenderGraph.js";
 
 class IVProgram extends DeviceProgram {
   public static a_Position = 0;
+  public static a_Normal = 1;
 
   public static ub_SceneParams = 0;
   public static ub_ObjectParams = 1;
@@ -49,31 +51,35 @@ class IVProgram extends DeviceProgram {
 precision mediump float;
 
 layout(std140) uniform ub_SceneParams {
-    Mat4x4 u_Projection;
-    Mat4x4 u_ModelView;
+  Mat4x4 u_Projection;
+  Mat4x4 u_ModelView;
 };
 
 layout(std140) uniform ub_ObjectParams {
-    vec4 u_Color;
+  vec4 u_Color;
 };
 
 varying vec2 v_LightIntensity;
 
 #ifdef VERT
 layout(location = ${IVProgram.a_Position}) attribute vec3 a_Position;
+layout(location = ${IVProgram.a_Normal}) attribute vec3 a_Normal;
 
 void mainVS() {
-    const float t_ModelScale = 20.0;
-    gl_Position = Mul(u_Projection, Mul(u_ModelView, vec4(a_Position * t_ModelScale, 1.0)));
-    vec3 t_LightDirection = normalize(vec3(.2, -1, .5));
+  const float t_ModelScale = 20.0;
+  gl_Position = Mul(u_Projection, Mul(u_ModelView, vec4(a_Position * t_ModelScale, 1.0)));
+  vec3 t_LightDirection = normalize(vec3(.2, -1, .5));
+  float t_LightIntensityF = dot(-a_Normal, t_LightDirection);
+  float t_LightIntensityB = dot( a_Normal, t_LightDirection);
+  v_LightIntensity = vec2(t_LightIntensityF, t_LightIntensityB);
 }
 #endif
 
 #ifdef FRAG
 void mainPS() {
-    float t_LightIntensity = gl_FrontFacing ? v_LightIntensity.x : v_LightIntensity.y;
-    float t_LightTint = 0.3 * t_LightIntensity;
-    gl_FragColor = u_Color + vec4(t_LightTint, t_LightTint, t_LightTint, 0.0);
+  float t_LightIntensity = gl_FrontFacing ? v_LightIntensity.x : v_LightIntensity.y;
+  float t_LightTint = 0.3 * t_LightIntensity;
+  gl_FragColor = u_Color + vec4(t_LightTint, t_LightTint, t_LightTint, 0.0);
 }
 #endif
 `;
@@ -85,20 +91,25 @@ class Chunk {
   public nrmBuffer: GfxBuffer;
   public vertexBufferDescriptors: GfxVertexBufferDescriptor[];
 
-  constructor(device: GfxDevice, public chunk: number[], private inputLayout: GfxInputLayout) {
+  constructor(device: GfxDevice, public vertices: number[], public normals: number[], private inputLayout: GfxInputLayout) {
     // Run through our data, calculate normals and such.
     const t = vec3.create();
 
-    const posData = new Float32Array(chunk);
+    // let { posData, nrmData } = get_buffers(indices, vertices);
+    // 
+    //
+    let posData = new Float32Array(vertices);
+    let nrmData = new Float32Array(normals);
 
-    console.log(chunk)
     this.posBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, posData.buffer);
+    this.nrmBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, nrmData.buffer);
 
     this.vertexBufferDescriptors = [
       { buffer: this.posBuffer, byteOffset: 0 },
+      { buffer: this.nrmBuffer, byteOffset: 0 },
     ];
 
-    this.numVertices = chunk.length;
+    this.numVertices = vertices.length / 3;
   }
 
   public prepareToRender(renderInstManager: GfxRenderInstManager): void {
@@ -110,6 +121,7 @@ class Chunk {
 
   public destroy(device: GfxDevice): void {
     device.destroyBuffer(this.posBuffer);
+    device.destroyBuffer(this.nrmBuffer);
   }
 }
 
@@ -122,22 +134,31 @@ export class IVRenderer {
   constructor(
     device: GfxDevice,
     // public iv: IV.IV,
+    vertices: number[], normals: number[],
     inputLayout: GfxInputLayout
   ) {
     // TODO(jstpierre): Coalesce chunks?
     this.name = "workin'";
-    const triangles: number[][] = [
-      [
-        10000., 0., 10000., -10000., 0., 10000., -10000., 0., -10000,
-        10000., 0., 10000., -10000., 0., -10000, 10000., 0., -10000.,
-      ],
-      // [
-      //   30000., 0., 30000., 10000., 0., 30000., 10000., 0., 10000,
-      //   30000., 0., 30000., 10000., 0., 10000., 30000., 0., 10000.,
-      // ]
-    ];
+    // let vertices: number[] = [
+    //   1, 1, -1,
+    //   1, -1, -1,
+    //   1, 1, 1,
+    //   1, -1, 1,
+    //   -1, 1, -1,
+    //   -1, -1, -1,
+    //   -1, 1, 1,
+    //   -1, -1, 1
+    // ];
+    // const indices: number[] = [
+    //   0, 4, 6, 0, 6, 2,
+    //   3, 2, 6, 3, 6, 7,
+    //   7, 6, 4, 7, 4, 5,
+    //   5, 1, 3, 5, 3, 7,
+    //   1, 0, 2, 1, 2, 3,
+    //   5, 4, 0, 5, 0, 1,
+    // ];
 
-    this.chunks = triangles.map((chunk) => new Chunk(device, chunk, inputLayout));
+    this.chunks = [new Chunk(device, vertices, normals, inputLayout)];
   }
 
   public setVisible(v: boolean) {
@@ -176,16 +197,17 @@ export class Scene implements Viewer.SceneGfx {
   private renderHelper: GfxRenderHelper;
   private renderInstListMain = new GfxRenderInstList();
 
-  constructor(device: GfxDevice) {//, public ivs: IV.IV[]) {
+  constructor(device: GfxDevice, vertices: number[], normals: number[]) {//, public ivs: IV.IV[]) {
     this.renderHelper = new GfxRenderHelper(device);
     this.program = this.renderHelper.renderCache.createProgram(new IVProgram());
 
     const vertexAttributeDescriptors: GfxVertexAttributeDescriptor[] = [
       { location: IVProgram.a_Position, bufferIndex: 0, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
+      { location: IVProgram.a_Normal, bufferIndex: 1, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
     ];
     const vertexBufferDescriptors: GfxInputLayoutBufferDescriptor[] = [
       { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
-      // { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
+      { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
     ];
     const indexBufferFormat: GfxFormat | null = null;
     const cache = this.renderHelper.renderCache;
@@ -198,7 +220,7 @@ export class Scene implements Viewer.SceneGfx {
     const ivs = [0];
 
     this.ivRenderers = ivs.map(() => {
-      return new IVRenderer(device, this.inputLayout);
+      return new IVRenderer(device, vertices, normals, this.inputLayout);
     });
   }
 
@@ -210,7 +232,7 @@ export class Scene implements Viewer.SceneGfx {
     const template = this.renderHelper.pushTemplateRenderInst();
     template.setBindingLayouts(bindingLayouts);
     template.setGfxProgram(this.program);
-    template.setMegaStateFlags({ cullMode: GfxCullMode.Back });
+    template.setMegaStateFlags({ cullMode: GfxCullMode.None });
 
     let offs = template.allocateUniformBuffer(IVProgram.ub_SceneParams, 32);
     const mapped = template.mapUniformBufferF32(IVProgram.ub_SceneParams);
@@ -227,8 +249,15 @@ export class Scene implements Viewer.SceneGfx {
   }
 
   public render(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput) {
-    const mainColorDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.Color0, viewerInput, standardFullClearRenderPassDescriptor);
-    const mainDepthDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.DepthStencil, viewerInput, standardFullClearRenderPassDescriptor);
+    const mainColorDesc = makeBackbufferDescSimple(
+      GfxrAttachmentSlot.Color0,
+      viewerInput,
+      standardFullClearRenderPassDescriptor
+    );
+    const mainDepthDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.DepthStencil,
+      viewerInput,
+      standardFullClearRenderPassDescriptor
+    );
 
     const builder = this.renderHelper.renderGraph.newGraphBuilder();
 

@@ -81,7 +81,7 @@ void mainPS() {
 `;
 }
 
-function get_buffers(indexData: number[], positionData: number[]) {
+export function get_buffers(indexData: number[], positionData: number[]) {
   const posData = new Float32Array(indexData.length * 3);
   const nrmData = new Float32Array(indexData.length * 3);
 
@@ -207,7 +207,7 @@ export class Scene implements Viewer.SceneGfx {
     //offs += fillColor(d, offs, this.color);
     fillColor(d, offs, this.color);
 
-    ///////////////////// chunk preparetorendere
+    ///////////////////// chunk preparetorender
     const renderInst = this.renderHelper.renderInstManager.newRenderInst();
     renderInst.setVertexInput(
       this.inputLayout,
