@@ -5,8 +5,7 @@ import { DeviceProgram } from "../Program.js";
 import * as Viewer from "../viewer.js";
 import * as UI from "../ui.js";
 
-import * as Fence from "./chunks/fence.js";
-import { get_buffers } from '../cube/render.js';
+// import * as Fence from "./fence.js";
 
 import {
   GfxDevice,
@@ -40,7 +39,7 @@ import {
 import { CameraController } from "../Camera.js";
 import { GfxrAttachmentSlot } from "../gfx/render/GfxRenderGraph.js";
 
-class IVProgram extends DeviceProgram {
+class FenceProgram extends DeviceProgram {
   public static a_Position = 0;
   public static a_Normal = 1;
 
@@ -62,8 +61,8 @@ layout(std140) uniform ub_ObjectParams {
 varying vec2 v_LightIntensity;
 
 #ifdef VERT
-layout(location = ${IVProgram.a_Position}) attribute vec3 a_Position;
-layout(location = ${IVProgram.a_Normal}) attribute vec3 a_Normal;
+layout(location = ${FenceProgram.a_Position}) attribute vec3 a_Position;
+layout(location = ${FenceProgram.a_Normal}) attribute vec3 a_Normal;
 
 void mainVS() {
   const float t_ModelScale = 20.0;
@@ -91,13 +90,17 @@ class Chunk {
   public nrmBuffer: GfxBuffer;
   public vertexBufferDescriptors: GfxVertexBufferDescriptor[];
 
-  constructor(device: GfxDevice, public vertices: number[], public normals: number[], private inputLayout: GfxInputLayout) {
+  constructor(
+    device: GfxDevice,
+    public vertices: number[],
+    public normals: number[],
+    private inputLayout: GfxInputLayout
+  ) {
     // Run through our data, calculate normals and such.
     const t = vec3.create();
 
     // let { posData, nrmData } = get_buffers(indices, vertices);
-    // 
-    //
+
     let posData = new Float32Array(vertices);
     let nrmData = new Float32Array(normals);
 
@@ -137,27 +140,7 @@ export class IVRenderer {
     vertices: number[], normals: number[],
     inputLayout: GfxInputLayout
   ) {
-    // TODO(jstpierre): Coalesce chunks?
     this.name = "workin'";
-    // let vertices: number[] = [
-    //   1, 1, -1,
-    //   1, -1, -1,
-    //   1, 1, 1,
-    //   1, -1, 1,
-    //   -1, 1, -1,
-    //   -1, -1, -1,
-    //   -1, 1, 1,
-    //   -1, -1, 1
-    // ];
-    // const indices: number[] = [
-    //   0, 4, 6, 0, 6, 2,
-    //   3, 2, 6, 3, 6, 7,
-    //   7, 6, 4, 7, 4, 5,
-    //   5, 1, 3, 5, 3, 7,
-    //   1, 0, 2, 1, 2, 3,
-    //   5, 4, 0, 5, 0, 1,
-    // ];
-
     this.chunks = [new Chunk(device, vertices, normals, inputLayout)];
   }
 
@@ -171,8 +154,8 @@ export class IVRenderer {
 
     const templateRenderInst = renderInstManager.pushTemplateRenderInst();
 
-    let offs = templateRenderInst.allocateUniformBuffer(IVProgram.ub_ObjectParams, 4);
-    const d = templateRenderInst.mapUniformBufferF32(IVProgram.ub_ObjectParams);
+    let offs = templateRenderInst.allocateUniformBuffer(FenceProgram.ub_ObjectParams, 4);
+    const d = templateRenderInst.mapUniformBufferF32(FenceProgram.ub_ObjectParams);
     offs += fillColor(d, offs, colorNewFromRGBA(255, 0, 0, 255));
 
     for (let i = 0; i < this.chunks.length; i++)
@@ -193,17 +176,17 @@ const bindingLayouts: GfxBindingLayoutDescriptor[] = [
 export class Scene implements Viewer.SceneGfx {
   private inputLayout: GfxInputLayout;
   private program: GfxProgram;
-  private ivRenderers: IVRenderer[] = [];
+
   private renderHelper: GfxRenderHelper;
   private renderInstListMain = new GfxRenderInstList();
 
-  constructor(device: GfxDevice, vertices: number[], normals: number[]) {//, public ivs: IV.IV[]) {
+  constructor(device: GfxDevice, private terra: ArrayBufferLike, private zones: ArrayBufferLike[]) {
     this.renderHelper = new GfxRenderHelper(device);
-    this.program = this.renderHelper.renderCache.createProgram(new IVProgram());
+    this.program = this.renderHelper.renderCache.createProgram(new FenceProgram());
 
     const vertexAttributeDescriptors: GfxVertexAttributeDescriptor[] = [
-      { location: IVProgram.a_Position, bufferIndex: 0, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
-      { location: IVProgram.a_Normal, bufferIndex: 1, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
+      { location: FenceProgram.a_Position, bufferIndex: 0, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
+      { location: FenceProgram.a_Normal, bufferIndex: 1, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
     ];
     const vertexBufferDescriptors: GfxInputLayoutBufferDescriptor[] = [
       { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
@@ -234,8 +217,8 @@ export class Scene implements Viewer.SceneGfx {
     template.setGfxProgram(this.program);
     template.setMegaStateFlags({ cullMode: GfxCullMode.None });
 
-    let offs = template.allocateUniformBuffer(IVProgram.ub_SceneParams, 32);
-    const mapped = template.mapUniformBufferF32(IVProgram.ub_SceneParams);
+    let offs = template.allocateUniformBuffer(FenceProgram.ub_SceneParams, 32);
+    const mapped = template.mapUniformBufferF32(FenceProgram.ub_SceneParams);
     offs += fillMatrix4x4(mapped, offs, viewerInput.camera.projectionMatrix);
     offs += fillMatrix4x4(mapped, offs, viewerInput.camera.viewMatrix);
 
@@ -254,7 +237,8 @@ export class Scene implements Viewer.SceneGfx {
       viewerInput,
       standardFullClearRenderPassDescriptor
     );
-    const mainDepthDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.DepthStencil,
+    const mainDepthDesc = makeBackbufferDescSimple(
+      GfxrAttachmentSlot.DepthStencil,
       viewerInput,
       standardFullClearRenderPassDescriptor
     );
