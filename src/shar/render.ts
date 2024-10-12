@@ -94,7 +94,7 @@ class Chunk {
     device: GfxDevice,
     public vertices: number[],
     public normals: number[],
-    private inputLayout: GfxInputLayout
+    private inputLayout: GfxInputLayout,
   ) {
     // Run through our data, calculate normals and such.
     const t = vec3.create();
@@ -104,8 +104,16 @@ class Chunk {
     let posData = new Float32Array(vertices);
     let nrmData = new Float32Array(normals);
 
-    this.posBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, posData.buffer);
-    this.nrmBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, nrmData.buffer);
+    this.posBuffer = makeStaticDataBuffer(
+      device,
+      GfxBufferUsage.Vertex,
+      posData.buffer,
+    );
+    this.nrmBuffer = makeStaticDataBuffer(
+      device,
+      GfxBufferUsage.Vertex,
+      nrmData.buffer,
+    );
 
     this.vertexBufferDescriptors = [
       { buffer: this.posBuffer, byteOffset: 0 },
@@ -117,7 +125,11 @@ class Chunk {
 
   public prepareToRender(renderInstManager: GfxRenderInstManager): void {
     const renderInst = renderInstManager.newRenderInst();
-    renderInst.setVertexInput(this.inputLayout, this.vertexBufferDescriptors, null);
+    renderInst.setVertexInput(
+      this.inputLayout,
+      this.vertexBufferDescriptors,
+      null,
+    );
     renderInst.setDrawCount(this.numVertices);
     renderInstManager.submitRenderInst(renderInst);
   }
@@ -137,8 +149,9 @@ export class IVRenderer {
   constructor(
     device: GfxDevice,
     // public iv: IV.IV,
-    vertices: number[], normals: number[],
-    inputLayout: GfxInputLayout
+    vertices: number[],
+    normals: number[],
+    inputLayout: GfxInputLayout,
   ) {
     this.name = "workin'";
     this.chunks = [new Chunk(device, vertices, normals, inputLayout)];
@@ -154,8 +167,13 @@ export class IVRenderer {
 
     const templateRenderInst = renderInstManager.pushTemplateRenderInst();
 
-    let offs = templateRenderInst.allocateUniformBuffer(FenceProgram.ub_ObjectParams, 4);
-    const d = templateRenderInst.mapUniformBufferF32(FenceProgram.ub_ObjectParams);
+    let offs = templateRenderInst.allocateUniformBuffer(
+      FenceProgram.ub_ObjectParams,
+      4,
+    );
+    const d = templateRenderInst.mapUniformBufferF32(
+      FenceProgram.ub_ObjectParams,
+    );
     offs += fillColor(d, offs, colorNewFromRGBA(255, 0, 0, 255));
 
     for (let i = 0; i < this.chunks.length; i++)
@@ -180,13 +198,29 @@ export class Scene implements Viewer.SceneGfx {
   private renderHelper: GfxRenderHelper;
   private renderInstListMain = new GfxRenderInstList();
 
-  constructor(device: GfxDevice, private terra: ArrayBufferLike, private zones: ArrayBufferLike[]) {
+  constructor(
+    device: GfxDevice,
+    private p3ds: ArrayBufferLike[],
+  ) {
+    const [terra, ...zone] = p3ds;
     this.renderHelper = new GfxRenderHelper(device);
-    this.program = this.renderHelper.renderCache.createProgram(new FenceProgram());
+    this.program = this.renderHelper.renderCache.createProgram(
+      new FenceProgram(),
+    );
 
     const vertexAttributeDescriptors: GfxVertexAttributeDescriptor[] = [
-      { location: FenceProgram.a_Position, bufferIndex: 0, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
-      { location: FenceProgram.a_Normal, bufferIndex: 1, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
+      {
+        location: FenceProgram.a_Position,
+        bufferIndex: 0,
+        bufferByteOffset: 0,
+        format: GfxFormat.F32_RGB,
+      },
+      {
+        location: FenceProgram.a_Normal,
+        bufferIndex: 1,
+        bufferByteOffset: 0,
+        format: GfxFormat.F32_RGB,
+      },
     ];
     const vertexBufferDescriptors: GfxInputLayoutBufferDescriptor[] = [
       { byteStride: 12, frequency: GfxVertexBufferFrequency.PerVertex },
@@ -197,7 +231,7 @@ export class Scene implements Viewer.SceneGfx {
     this.inputLayout = cache.createInputLayout({
       vertexAttributeDescriptors,
       vertexBufferDescriptors,
-      indexBufferFormat
+      indexBufferFormat,
     });
 
     const ivs = [0];
@@ -211,7 +245,10 @@ export class Scene implements Viewer.SceneGfx {
     c.setSceneMoveSpeedMult(16 / 60);
   }
 
-  private prepareToRender(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput): void {
+  private prepareToRender(
+    device: GfxDevice,
+    viewerInput: Viewer.ViewerRenderInput,
+  ): void {
     const template = this.renderHelper.pushTemplateRenderInst();
     template.setBindingLayouts(bindingLayouts);
     template.setGfxProgram(this.program);
@@ -222,7 +259,9 @@ export class Scene implements Viewer.SceneGfx {
     offs += fillMatrix4x4(mapped, offs, viewerInput.camera.projectionMatrix);
     offs += fillMatrix4x4(mapped, offs, viewerInput.camera.viewMatrix);
 
-    this.renderHelper.renderInstManager.setCurrentRenderInstList(this.renderInstListMain);
+    this.renderHelper.renderInstManager.setCurrentRenderInstList(
+      this.renderInstListMain,
+    );
 
     for (let i = 0; i < this.ivRenderers.length; i++)
       this.ivRenderers[i].prepareToRender(this.renderHelper.renderInstManager);
@@ -235,28 +274,47 @@ export class Scene implements Viewer.SceneGfx {
     const mainColorDesc = makeBackbufferDescSimple(
       GfxrAttachmentSlot.Color0,
       viewerInput,
-      standardFullClearRenderPassDescriptor
+      standardFullClearRenderPassDescriptor,
     );
     const mainDepthDesc = makeBackbufferDescSimple(
       GfxrAttachmentSlot.DepthStencil,
       viewerInput,
-      standardFullClearRenderPassDescriptor
+      standardFullClearRenderPassDescriptor,
     );
 
     const builder = this.renderHelper.renderGraph.newGraphBuilder();
 
-    const mainColorTargetID = builder.createRenderTargetID(mainColorDesc, 'Main Color');
-    const mainDepthTargetID = builder.createRenderTargetID(mainDepthDesc, 'Main Depth');
+    const mainColorTargetID = builder.createRenderTargetID(
+      mainColorDesc,
+      "Main Color",
+    );
+    const mainDepthTargetID = builder.createRenderTargetID(
+      mainDepthDesc,
+      "Main Depth",
+    );
     builder.pushPass((pass) => {
-      pass.setDebugName('Main');
+      pass.setDebugName("Main");
       pass.attachRenderTargetID(GfxrAttachmentSlot.Color0, mainColorTargetID);
-      pass.attachRenderTargetID(GfxrAttachmentSlot.DepthStencil, mainDepthTargetID);
+      pass.attachRenderTargetID(
+        GfxrAttachmentSlot.DepthStencil,
+        mainDepthTargetID,
+      );
       pass.exec((passRenderer) => {
-        this.renderInstListMain.drawOnPassRenderer(this.renderHelper.renderCache, passRenderer);
+        this.renderInstListMain.drawOnPassRenderer(
+          this.renderHelper.renderCache,
+          passRenderer,
+        );
       });
     });
-    this.renderHelper.antialiasingSupport.pushPasses(builder, viewerInput, mainColorTargetID);
-    builder.resolveRenderTargetToExternalTexture(mainColorTargetID, viewerInput.onscreenTexture);
+    this.renderHelper.antialiasingSupport.pushPasses(
+      builder,
+      viewerInput,
+      mainColorTargetID,
+    );
+    builder.resolveRenderTargetToExternalTexture(
+      mainColorTargetID,
+      viewerInput.onscreenTexture,
+    );
 
     this.prepareToRender(device, viewerInput);
     this.renderHelper.renderGraph.execute(builder);

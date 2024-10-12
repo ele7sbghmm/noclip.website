@@ -1,27 +1,25 @@
+// c++
+export type float = number;
+export type int = number;
+export type unsigned = number;
+export type short = number;
+export type unsigned_short = number;
+export type char = number;
+export type unsigned_char = number;
+export type unsigned_char_p = number;
 
-// c++ 
-export type float = number
-export type int = number
-export type unsigned = number
-export type short = number
-export type unsigned_short = number
-export type char = number
-export type unsigned_char = number
+export type unsigned___int64 = number;
+export type __int64 = number;
 
-export type unsigned___int64 = number
-export type __int64 = number
-
-export type char_p = string
-
+export type char_p = string;
 
 // radical
-export type P3D_S64 = __int64
-export type P3D_U64 = unsigned___int64
-export type P3D_S32 = int
-export type P3D_U32 = unsigned
-export type P3D_S8 = char
-export type P3D_U8 = unsigned_char
-export type P3D_S16 = short
-export type P3D_U16 = unsigned_short
-export type P3D_UNICODE = unsigned_short
-
+export type P3D_S64 = __int64;
+export type P3D_U64 = unsigned___int64;
+export type P3D_S32 = int;
+export type P3D_U32 = unsigned;
+export type P3D_S8 = char;
+export type P3D_U8 = unsigned_char;
+export type P3D_S16 = short;
+export type P3D_U16 = unsigned_short;
+export type P3D_UNICODE = unsigned_short;

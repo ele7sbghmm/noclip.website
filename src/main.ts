@@ -116,14 +116,10 @@ import { debugJunk } from './DebugJunk.js';
 
 import * as Scenes_Cube from './cube/scenes.js';
 import * as Scenes_Shar from './shar/scenes.js';
-// import * as Scenes_Shur from './shur/scenes.js';
-// import * as Scenes_Test1 from './test1/scenes.js';
 
 const sceneGroups: (string | SceneGroup)[] = [
     Scenes_Cube.sceneGroup,
     Scenes_Shar.sceneGroup,
-    // Scenes_Shur.sceneGroup,
-    // Scenes_Test1.sceneGroup,
 
     "Wii",
     Scenes_MarioKartWii.sceneGroup,

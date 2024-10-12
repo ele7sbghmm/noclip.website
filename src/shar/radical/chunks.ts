@@ -8,7 +8,6 @@ import { FenceEntityDSG } from "./fence.js";
 import { CollisionObject } from "./collision.js";
 import { StaticPhysDSG, ObjectAttribute } from "./staticphys.js";
 
-
 type ID = number;
 export const HEADER_SIZE = 12;
 
@@ -44,22 +43,25 @@ export function from_id(id: ID): ChunkEnum {
 }
 export function get_parser(chunk: ChunkEnum): any {
   switch (chunk) {
-    case ChunkEnum.P3D: break;
-    case ChunkEnum.SKIP: break;
-    case ChunkEnum.FENCE: return FenceEntityDSG.parse;
+    case ChunkEnum.P3D:
+      break;
+    case ChunkEnum.SKIP:
+      break;
+    case ChunkEnum.FENCE:
+      return FenceEntityDSG.parse;
     // case ChunkEnum.COLLISION_OBJECT: return CollisionObject.parser;
     // case ChunkEnum.COLLISION_OBJECT: return CollisionObject.parser;
     // case ChunkEnum.STATICPHYSDSG: return StaticPhysDsg.parse_chunk;
     // default: throw new Error(`unimplemented chunk: ${chunk}`);
   }
-  return () => { };
+  return () => {};
 }
 
 export type Header = {
   chunk_id: u32;
   data_size: u32; // header (12) + this chunk's data
   chunk_size: u32; // data_size + all subchunks
-}
+};
 
 // export interface Chunk {
 //   // header: Header,
@@ -84,4 +86,3 @@ export function parse_header(buf: BufReader, peek: boolean = false): Header {
 //
 //   return { rest_buf, chunk_buf, header };
 // }
-

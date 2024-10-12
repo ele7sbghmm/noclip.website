@@ -8,7 +8,8 @@ class FenceLoader {
   public mFenceCount: number;
   public name: string;
 
-  public LoadObject(f: tChunkFile): FenceEntityDSG { // tEntity {
+  public LoadObject(f: tChunkFile): FenceEntityDSG {
+    // tEntity {
     const pFenceDSG = new FenceEntityDSG();
 
     // const header = BeginChunk();
@@ -33,10 +34,8 @@ class FenceLoader {
   }
 }
 
-
 export class FenceEntityDSG implements tEntity {
   public mStartPoint: rmt_Vector;
   public mEndPoint: rmt_Vector;
   public mNormal: rmt_Vector;
 }
-
