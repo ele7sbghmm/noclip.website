@@ -115,11 +115,11 @@ import { WebXRContext } from './WebXR.js';
 import { debugJunk } from './DebugJunk.js';
 
 import * as Scenes_Cube from './cube/scenes.js';
-import * as Scenes_Shar from './shar/scenes.js';
+//import * as Scenes_Shar from './shar/scenes.js';
 
 const sceneGroups: (string | SceneGroup)[] = [
     Scenes_Cube.sceneGroup,
-    Scenes_Shar.sceneGroup,
+    //Scenes_Shar.sceneGroup,
 
     "Wii",
     Scenes_MarioKartWii.sceneGroup,
