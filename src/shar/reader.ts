@@ -1,6 +1,6 @@
 import { NamedArrayBufferSlice } from "../DataFetcher.js";
 import { assert } from "../util.js";
-import { f32, u32, i32, u16, i16, u8, i8 } from "./utils.js";
+import { f32, u32, i32, u16, i16, u8, i8 } from "./util.js";
 
 export class BufReader {
   readonly name: string;

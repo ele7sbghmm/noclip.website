@@ -14,10 +14,9 @@ class SceneDesc implements Viewer.SceneDesc {
   ): Promise<Viewer.SceneGfx> {
     const dataFetcher = context.dataFetcher;
 
-    const dir = `shar/${id}/`;
     const p3ds = await Promise.all(
       this.level.files.map((file_name) =>
-        dataFetcher.fetchData(`${dir}${file_name}`),
+        dataFetcher.fetchData(`shar/${id}/${file_name}`),
       ),
     );
 
@@ -28,7 +27,7 @@ class SceneDesc implements Viewer.SceneDesc {
 type Level = { id: string; files: string[]; };
 const level7: Level = {
   id: "l7",
-  files: ["L7_TERRA.P3D", "l1z1.p3d"],
+  files: ["L7_TERRA.P3D"],// "l1z1.p3d"],
 };
 
 const sceneDescs: SceneDesc[] = [new SceneDesc(level7)];

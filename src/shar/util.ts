@@ -1,4 +1,4 @@
-import { float } from "../types.js";
+import { float } from "./types.js";
 
 export type tUID = string;
 
@@ -15,5 +15,5 @@ export class pddi_Colour {
     public g: float,
     public b: float,
     public a: float,
-  ) {}
+  ) { }
 }

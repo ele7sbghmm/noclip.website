@@ -1,12 +1,8 @@
-import { assert } from "../util.js";
-import ArrayBufferSlice from "../ArrayBufferSlice.js";
-
 import { BufReader } from "./reader.js";
-import { u32 } from "./utils.js";
+import { u32, f32 } from "./types.js";
 
-import { FenceEntityDSG } from "./fence.js";
-import { CollisionObject } from "./collision.js";
-import { StaticPhysDSG, ObjectAttribute } from "./staticphys.js";
+// import { FenceEntityDSG } from "./fence.js";
+import { Fence } from "./fence.js";
 
 type ID = number;
 export const HEADER_SIZE = 12;
@@ -34,8 +30,8 @@ export function from_id(id: ID): ChunkEnum {
     // case 0x0:
     // case 0x0:
     //   return ChunkEnum.STATICPHYSDSG;
-    case 0x07010000:
-    case 0x00000107:
+    // case 0x07010000:
+    // case 0x00000107:
     // return ChunkEnum.COLLISION_OBJECT;
     default:
       return ChunkEnum.SKIP;
@@ -48,26 +44,20 @@ export function get_parser(chunk: ChunkEnum): any {
     case ChunkEnum.SKIP:
       break;
     case ChunkEnum.FENCE:
-      return FenceEntityDSG.parse;
+      return Fence.parse;
     // case ChunkEnum.COLLISION_OBJECT: return CollisionObject.parser;
     // case ChunkEnum.COLLISION_OBJECT: return CollisionObject.parser;
     // case ChunkEnum.STATICPHYSDSG: return StaticPhysDsg.parse_chunk;
     // default: throw new Error(`unimplemented chunk: ${chunk}`);
   }
-  return () => {};
+  return () => { };
 }
 
 export type Header = {
-  chunk_id: u32;
-  data_size: u32; // header (12) + this chunk's data
-  chunk_size: u32; // data_size + all subchunks
+  chunk_id: u32,
+  data_size: u32, // header (12) + this chunk's data
+  chunk_size: u32, // data_size + all subchunks
 };
-
-// export interface Chunk {
-//   // header: Header,
-//   parser: (buf: ArrayBufferSlice, offs: number) => any;
-// }
-
 export function parse_header(buf: BufReader, peek: boolean = false): Header {
   const header: Header = {
     chunk_id: buf.be_u32(),
@@ -75,6 +65,19 @@ export function parse_header(buf: BufReader, peek: boolean = false): Header {
     chunk_size: buf.le_u32(),
   };
   return header;
+}
+
+export type rmtVector = {
+  x: f32,
+  y: f32, // header (12) + this chunk's data
+  z: f32, // data_size + all subchunks
+};
+export function parse_rmtVector(buf: BufReader): rmtVector {
+  return {
+    x: buf.le_f32(),
+    y: buf.le_f32(),
+    z: buf.le_f32(),
+  }
 }
 
 // export function parse_chunk(buf: BufReader)

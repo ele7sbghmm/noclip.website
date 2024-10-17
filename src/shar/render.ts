@@ -202,7 +202,7 @@ export class Scene implements Viewer.SceneGfx {
     device: GfxDevice,
     private p3ds: ArrayBufferLike[],
   ) {
-    const [terra, ...zone] = p3ds;
+    const [terra, ...zones] = p3ds;
     this.renderHelper = new GfxRenderHelper(device);
     this.program = this.renderHelper.renderCache.createProgram(
       new FenceProgram(),
