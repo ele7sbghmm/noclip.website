@@ -9,18 +9,20 @@ export type f32 = number;
 
 // c++
 export type float = number;
+
+export type char = number;
+export type short = number;
 export type int = number;
 export type unsigned = number;
-export type short = number;
-export type unsigned_short = number;
-export type char = number;
 export type unsigned_char = number;
+export type unsigned_short = number;
+export type unsigned_int = number;
+
+export type char_p = string;
 export type unsigned_char_p = number;
 
 export type unsigned___int64 = number;
 export type __int64 = number;
-
-export type char_p = string;
 
 // radical
 export type P3D_S64 = __int64;

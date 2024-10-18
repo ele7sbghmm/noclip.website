@@ -1,6 +1,4 @@
-import { unsigned } from "../types.js";
-
-// Simpsons\ Hit&Run/game/lib/pure3d/export constatnts/chunkids.hpp
+import { unsigned } from '../type_aliases.js';
 
 /*===========================================================================
     File:: chunksids.hpp
@@ -14,8 +12,8 @@ import { unsigned } from "../types.js";
     All rights reserved.
 ===========================================================================*/
 
-// #ifndef _CHUNKIDS_HPP
-// #define _CHUNKIDS_HPP
+//? #ifndef _CHUNKIDS_HPP
+//? #define _CHUNKIDS_HPP
 
 /*===========================================================================
  Project Ranges
@@ -34,87 +32,87 @@ import { unsigned } from "../types.js";
 ===========================================================================*/
 export namespace Pure3D {
   // The top level wrapper chunk IDs
-  export const DATA_FILE: unsigned = 0xff443350;
-  export const DATA_FILE_SWAP: unsigned = 0x503344ff; // P3D wrapper ID on big endian
-  export const DATA_FILE_COMPRESSED: unsigned = 0x5a443350;
-  export const DATA_FILE_COMPRESSED_SWAP: unsigned = 0x5033445a;
+  const DATA_FILE: unsigned = 0xFF443350;
+  const DATA_FILE_SWAP: unsigned = 0x503344FF;       // P3D wrapper ID on big endian
+  const DATA_FILE_COMPRESSED: unsigned = 0x5A443350;
+  const DATA_FILE_COMPRESSED_SWAP: unsigned = 0x5033445A;
 
   // Mesh System 0x00010000 - 0x00010fff
   export namespace Mesh {
-    export const MESH: unsigned = 0x00010000;
-    export const SKIN: unsigned = 0x00010001;
-    export const PRIMGROUP: unsigned = 0x00010002;
-    export const BOX: unsigned = 0x00010003;
-    export const SPHERE: unsigned = 0x00010004;
-    export const POSITIONLIST: unsigned = 0x00010005;
-    export const NORMALLIST: unsigned = 0x00010006;
-    export const UVLIST: unsigned = 0x00010007;
-    export const COLOURLIST: unsigned = 0x00010008;
-    export const STRIPLIST: unsigned = 0x00010009;
-    export const INDEXLIST: unsigned = 0x0001000a;
-    export const MATRIXLIST: unsigned = 0x0001000b;
-    export const WEIGHTLIST: unsigned = 0x0001000c;
-    export const MATRIXPALETTE: unsigned = 0x0001000d;
-    export const OFFSETLIST: unsigned = 0x0001000e;
-    export const INSTANCEINFO: unsigned = 0x0001000f;
-    export const PACKEDNORMALLIST: unsigned = 0x00010010;
-    export const VERTEXSHADER: unsigned = 0x00010011;
-    export const MEMORYIMAGEVERTEXLIST: unsigned = 0x00010012;
-    export const MEMORYIMAGEINDEXLIST: unsigned = 0x00010013;
-    export const MEMORYIMAGEVERTEXDESCRIPTIONLIST: unsigned = 0x00010014;
-    export const TANGENTLIST: unsigned = 0x00010015;
-    export const BINORMALLIST: unsigned = 0x00010016;
-    export const RENDERSTATUS: unsigned = 0x00010017;
-    export const EXPRESSIONOFFSETS: unsigned = 0x00010018;
-    export const SHADOWSKIN: unsigned = 0x00010019;
-    export const SHADOWMESH: unsigned = 0x0001001a;
-    export const TOPOLOGY: unsigned = 0x0001001b;
-    export const MULTICOLOURLIST: unsigned = 0x0001001c;
+    const MESH: unsigned = 0x00010000;
+    const SKIN: unsigned = 0x00010001;
+    const PRIMGROUP: unsigned = 0x00010002;
+    const BOX: unsigned = 0x00010003;
+    const SPHERE: unsigned = 0x00010004;
+    const POSITIONLIST: unsigned = 0x00010005;
+    const NORMALLIST: unsigned = 0x00010006;
+    const UVLIST: unsigned = 0x00010007;
+    const COLOURLIST: unsigned = 0x00010008;
+    const STRIPLIST: unsigned = 0x00010009;
+    const INDEXLIST: unsigned = 0x0001000A;
+    const MATRIXLIST: unsigned = 0x0001000B;
+    const WEIGHTLIST: unsigned = 0x0001000C;
+    const MATRIXPALETTE: unsigned = 0x0001000D;
+    const OFFSETLIST: unsigned = 0x0001000E;
+    const INSTANCEINFO: unsigned = 0x0001000F;
+    const PACKEDNORMALLIST: unsigned = 0x00010010;
+    const VERTEXSHADER: unsigned = 0x00010011;
+    const MEMORYIMAGEVERTEXLIST: unsigned = 0x00010012;
+    const MEMORYIMAGEINDEXLIST: unsigned = 0x00010013;
+    const MEMORYIMAGEVERTEXDESCRIPTIONLIST: unsigned = 0x00010014;
+    const TANGENTLIST: unsigned = 0x00010015;
+    const BINORMALLIST: unsigned = 0x00010016;
+    const RENDERSTATUS: unsigned = 0x00010017;
+    const EXPRESSIONOFFSETS: unsigned = 0x00010018;
+    const SHADOWSKIN: unsigned = 0x00010019;
+    const SHADOWMESH: unsigned = 0x0001001A;
+    const TOPOLOGY: unsigned = 0x0001001B;
+    const MULTICOLOURLIST: unsigned = 0x0001001C;
   }
-  // End Mesh System
+  // End Mesh System 
 
   // Shader System 0x00011000 - 0x00011fff
   export namespace Shader {
-    export const SHADER: unsigned = 0x00011000;
-    export const SHADER_DEFINITION: unsigned = 0x00011001;
-    export const TEXTURE_PARAM: unsigned = 0x00011002;
-    export const INT_PARAM: unsigned = 0x00011003;
-    export const FLOAT_PARAM: unsigned = 0x00011004;
-    export const COLOUR_PARAM: unsigned = 0x00011005;
-    export const VECTOR_PARAM: unsigned = 0x00011006;
-    export const MATRIX_PARAM: unsigned = 0x00011007;
+    const SHADER: unsigned = 0x00011000;
+    const SHADER_DEFINITION: unsigned = 0x00011001;
+    const TEXTURE_PARAM: unsigned = 0x00011002;
+    const INT_PARAM: unsigned = 0x00011003;
+    const FLOAT_PARAM: unsigned = 0x00011004;
+    const COLOUR_PARAM: unsigned = 0x00011005;
+    const VECTOR_PARAM: unsigned = 0x00011006;
+    const MATRIX_PARAM: unsigned = 0x00011007;
   }
 
   // GameAddr 0x00012000 - 0x00012fff
   export namespace GameAttr {
-    export const GAME_ATTR: unsigned = 0x00012000;
-    export const INT_PARAM: unsigned = 0x00012001;
-    export const FLOAT_PARAM: unsigned = 0x00012002;
-    export const COLOUR_PARAM: unsigned = 0x00012003;
-    export const VECTOR_PARAM: unsigned = 0x00012004;
-    export const MATRIX_PARAM: unsigned = 0x00012005;
+    const GAME_ATTR: unsigned = 0x00012000;
+    const INT_PARAM: unsigned = 0x00012001;
+    const FLOAT_PARAM: unsigned = 0x00012002;
+    const COLOUR_PARAM: unsigned = 0x00012003;
+    const VECTOR_PARAM: unsigned = 0x00012004;
+    const MATRIX_PARAM: unsigned = 0x00012005;
   }
 
   // Light 0x00013000-0x00013fff
   export namespace Light {
-    export const LIGHT: unsigned = 0x00013000;
-    export const DIRECTION: unsigned = 0x00013001;
-    export const POSITION: unsigned = 0x00013002;
-    export const CONE_PARAM: unsigned = 0x00013003;
-    export const SHADOW: unsigned = 0x00013004;
-    export const PHOTON_MAP: unsigned = 0x00013005;
+    const LIGHT: unsigned = 0x00013000;
+    const DIRECTION: unsigned = 0x00013001;
+    const POSITION: unsigned = 0x00013002;
+    const CONE_PARAM: unsigned = 0x00013003;
+    const SHADOW: unsigned = 0x00013004;
+    const PHOTON_MAP: unsigned = 0x00013005;
 
     // Decay range
-    export const DECAY_RANGE: unsigned = 0x00013006;
-    export const DECAY_RANGE_ROTATION_Y: unsigned = 0x00013007;
+    const DECAY_RANGE: unsigned = 0x00013006;
+    const DECAY_RANGE_ROTATION_Y: unsigned = 0x00013007;
 
-    export const ILLUMINATION_TYPE: unsigned = 0x00013008;
+    const ILLUMINATION_TYPE: unsigned = 0x00013008;
   }
   // End Light System
 
   // Locator 0x00014000-0x00014fff
   export namespace Locator {
-    export const LOCATOR: unsigned = 0x00014000;
+    const LOCATOR: unsigned = 0x00014000;
   }
 
   // Particle System 0x00015000-0x00015fff
@@ -123,276 +121,282 @@ export namespace Pure3D {
     //!!! DON'T USE !!!
 
     //0x00015800-0x000158ff particle system specific chunks
-    export const SYSTEM_FACTORY: unsigned = 0x00015800;
-    export const SYSTEM: unsigned = 0x00015801;
+    const SYSTEM_FACTORY: unsigned = 0x00015800;
+    const SYSTEM: unsigned = 0x00015801;
 
-    export const BASE_PARTICLE_ARRAY: unsigned = 0x00015802;
-    export const SPRITE_PARTICLE_ARRAY: unsigned = 0x00015803;
-    export const DRAWABLE_PARTICLE_ARRAY: unsigned = 0x00015804;
+    const BASE_PARTICLE_ARRAY: unsigned = 0x00015802;
+    const SPRITE_PARTICLE_ARRAY: unsigned = 0x00015803;
+    const DRAWABLE_PARTICLE_ARRAY: unsigned = 0x00015804;
 
-    export const BASE_EMITTER_FACTORY: unsigned = 0x00015805;
-    export const SPRITE_EMITTER_FACTORY: unsigned = 0x00015806;
-    export const DRAWABLE_EMITTER_FACTORY: unsigned = 0x00015807;
+    const BASE_EMITTER_FACTORY: unsigned = 0x00015805;
+    const SPRITE_EMITTER_FACTORY: unsigned = 0x00015806;
+    const DRAWABLE_EMITTER_FACTORY: unsigned = 0x00015807;
 
-    export const PARTICLE_ANIMATION: unsigned = 0x00015808;
-    export const EMITTER_ANIMATION: unsigned = 0x00015809;
-    export const GENERATOR_ANIMATION: unsigned = 0x0001580a;
+    const PARTICLE_ANIMATION: unsigned = 0x00015808;
+    const EMITTER_ANIMATION: unsigned = 0x00015809;
+    const GENERATOR_ANIMATION: unsigned = 0x0001580a;
 
-    export const INSTANCING_INFO: unsigned = 0x0001580b;
+    const INSTANCING_INFO: unsigned = 0x0001580b;
   }
 
   // Optic Effect 0x00016000-0x00016fff
   export namespace OpticEffect {
-    export const CORONA_V14: unsigned = 0x00016000;
-    export const LENS_FLARE_PARENT_V14: unsigned = 0x00016001;
-    export const LENS_FLARE_V14: unsigned = 0x00016002;
-    export const VECTOR_V14: unsigned = 0x00016f00;
+    const CORONA_V14: unsigned = 0x00016000;
+    const LENS_FLARE_PARENT_V14: unsigned = 0x00016001;
+    const LENS_FLARE_V14: unsigned = 0x00016002;
+    const VECTOR_V14: unsigned = 0x00016f00;
 
-    export const LENS_FLARE_GROUP: unsigned = 0x00016006;
-    export const LENS_FLARE: unsigned = 0x00016007;
+    const LENS_FLARE_GROUP: unsigned = 0x00016006;
+    const LENS_FLARE: unsigned = 0x00016007;
   }
 
   // Billboard 0x00017000-0x00017fff
   export namespace BillboardObject {
-    export const QUAD_V14: unsigned = 0x00017000;
+    const QUAD_V14: unsigned = 0x00017000;
 
-    export const QUAD: unsigned = 0x00017001;
-    export const QUAD_GROUP: unsigned = 0x00017002;
-    export const DISPLAY_INFO: unsigned = 0x00017003;
-    export const PERSPECTIVE_INFO: unsigned = 0x00017004;
+    const QUAD: unsigned = 0x00017001;
+    const QUAD_GROUP: unsigned = 0x00017002;
+    const DISPLAY_INFO: unsigned = 0x00017003;
+    const PERSPECTIVE_INFO: unsigned = 0x00017004;
   }
 
   // Scrooby (Front End Subsystem) 0x00018000-0x00018fff
   export namespace Scrooby {
-    export const PROJECT: unsigned = 0x00018000;
-    export const SCREEN: unsigned = 0x00018001;
-    export const PAGE: unsigned = 0x00018002;
-    export const LAYER: unsigned = 0x00018003;
+    const PROJECT: unsigned = 0x00018000;
+    const SCREEN: unsigned = 0x00018001;
+    const PAGE: unsigned = 0x00018002;
+    const LAYER: unsigned = 0x00018003;
 
     //objects
-    export const GROUP: unsigned = 0x00018004;
-    export const MOVIE: unsigned = 0x00018005;
-    export const MULTISPRITE: unsigned = 0x00018006;
-    export const MULTITEXT: unsigned = 0x00018007;
-    export const P3DOBJECT: unsigned = 0x00018008;
-    export const POLYGON: unsigned = 0x00018009;
-    export const SPRITE: unsigned = 0x0001800a;
+    const GROUP: unsigned = 0x00018004;
+    const MOVIE: unsigned = 0x00018005;
+    const MULTISPRITE: unsigned = 0x00018006;
+    const MULTITEXT: unsigned = 0x00018007;
+    const P3DOBJECT: unsigned = 0x00018008;
+    const POLYGON: unsigned = 0x00018009;
+    const SPRITE: unsigned = 0x0001800A;
 
     //subobjects
-    export const STRINGTEXTBIBLE: unsigned = 0x0001800b;
-    export const STRINGHARDCODED: unsigned = 0x0001800c;
+    const STRINGTEXTBIBLE: unsigned = 0x0001800B;
+    const STRINGHARDCODED: unsigned = 0x0001800C;
 
     //text bible objects
-    export const TEXTBIBLE: unsigned = 0x0001800d;
-    export const LANGUAGE: unsigned = 0x0001800e;
+    const TEXTBIBLE: unsigned = 0x0001800D;
+    const LANGUAGE: unsigned = 0x0001800E;
 
     //resources
-    export const RESOURCEIMAGE: unsigned = 0x00018100;
-    export const RESOURCEPURE3D: unsigned = 0x00018101;
-    export const OLDRESOURCETEXTSTYLE: unsigned = 0x00018102;
-    export const OLDRESOURCETEXTBIBLE: unsigned = 0x00018103;
-    export const RESOURCETEXTSTYLE: unsigned = 0x00018104;
-    export const RESOURCETEXTBIBLE: unsigned = 0x00018105;
+    const RESOURCEIMAGE: unsigned = 0x00018100;
+    const RESOURCEPURE3D: unsigned = 0x00018101;
+    const OLDRESOURCETEXTSTYLE: unsigned = 0x00018102;
+    const OLDRESOURCETEXTBIBLE: unsigned = 0x00018103;
+    const RESOURCETEXTSTYLE: unsigned = 0x00018104;
+    const RESOURCETEXTBIBLE: unsigned = 0x00018105;
   }
 
   // Texture 0x00019000-0x00019fff
   export namespace Texture {
-    export const TEXTURE: unsigned = 0x00019000;
-    export const IMAGE: unsigned = 0x00019001;
-    export const IMAGE_DATA: unsigned = 0x00019002;
-    export const IMAGE_FILENAME: unsigned = 0x00019003;
-    export const VOLUME_IMAGE: unsigned = 0x00019004;
-    export const SPRITE: unsigned = 0x00019005;
+    const TEXTURE: unsigned = 0x00019000;
+    const IMAGE: unsigned = 0x00019001;
+    const IMAGE_DATA: unsigned = 0x00019002;
+    const IMAGE_FILENAME: unsigned = 0x00019003;
+    const VOLUME_IMAGE: unsigned = 0x00019004;
+    const SPRITE: unsigned = 0x00019005;
   }
 
   // Animated Object 0x00020000-0x00020fff
   export namespace AnimatedObject {
-    export const FACTORY: unsigned = 0x00020000;
-    export const OBJECT: unsigned = 0x00020001;
-    export const ANIMATION: unsigned = 0x00020002;
+    const FACTORY: unsigned = 0x00020000;
+    const OBJECT: unsigned = 0x00020001;
+    const ANIMATION: unsigned = 0x00020002;
   }
 
   // Animated Object 0x00021000-0x00021fff
   export namespace Expression {
-    export const VERTEX_EXPRESSION: unsigned = 0x00021000;
-    export const VERTEX_EXPRESSION_GROUP: unsigned = 0x00021001;
-    export const VERTEX_EXPRESSION_MIXER: unsigned = 0x00021002;
+    const VERTEX_EXPRESSION: unsigned = 0x00021000;
+    const VERTEX_EXPRESSION_GROUP: unsigned = 0x00021001;
+    const VERTEX_EXPRESSION_MIXER: unsigned = 0x00021002;
   }
 
   // Font 0x00022000-0x00022fff
   export namespace Font {
-    export const TEXTURE_FONT: unsigned = 0x00022000;
-    export const TEXTURE_GLYPH_LIST: unsigned = 0x00022001;
-    export const IMAGE_FONT: unsigned = 0x00022002;
-    export const IMAGE_GLYPH_LIST: unsigned = 0x00022003;
+    const TEXTURE_FONT: unsigned = 0x00022000;
+    const TEXTURE_GLYPH_LIST: unsigned = 0x00022001;
+    const IMAGE_FONT: unsigned = 0x00022002;
+    const IMAGE_GLYPH_LIST: unsigned = 0x00022003;
   }
 
   // next free 0x00023000-0x00023fff
 
   // SceneGraph 0x00120100-0x001201ff
   export namespace SceneGraph {
-    export const SCENEGRAPH: unsigned = 0x00120100;
-    export const ROOT: unsigned = 0x00120101;
-    export const BRANCH: unsigned = 0x00120102;
-    export const TRANSFORM: unsigned = 0x00120103;
-    export const VISIBILITY: unsigned = 0x00120104;
-    export const ATTACHMENT: unsigned = 0x00120105;
-    export const ATTACHMENTPOINT: unsigned = 0x00120106;
-    export const DRAWABLE: unsigned = 0x00120107;
-    export const CAMERA: unsigned = 0x00120108;
-    export const LIGHTGROUP: unsigned = 0x00120109;
-    export const SORTORDER: unsigned = 0x0012010a;
+    const SCENEGRAPH: unsigned = 0x00120100;
+    const ROOT: unsigned = 0x00120101;
+    const BRANCH: unsigned = 0x00120102;
+    const TRANSFORM: unsigned = 0x00120103;
+    const VISIBILITY: unsigned = 0x00120104;
+    const ATTACHMENT: unsigned = 0x00120105;
+    const ATTACHMENTPOINT: unsigned = 0x00120106;
+    const DRAWABLE: unsigned = 0x00120107;
+    const CAMERA: unsigned = 0x00120108;
+    const LIGHTGROUP: unsigned = 0x00120109;
+    const SORTORDER: unsigned = 0x0012010A;
   }
 
   // Animation 0x000121000-0x000121fff
   export namespace Animation {
     // Animation Data 0x00121000-0x001210ff
     export namespace AnimationData {
-      export const ANIMATION: unsigned = 0x00121000;
-      export const GROUP: unsigned = 0x00121001;
-      export const GROUP_LIST: unsigned = 0x00121002;
-      export const SIZE: unsigned = 0x00121004;
+      const ANIMATION: unsigned = 0x00121000;
+      const GROUP: unsigned = 0x00121001;
+      const GROUP_LIST: unsigned = 0x00121002;
+      const SIZE: unsigned = 0x00121004;
     }
 
     // Channel Data 0x000121100-0x0001211ff
     export namespace ChannelData {
-      export const FLOAT_1: unsigned = 0x00121100;
-      export const FLOAT_2: unsigned = 0x00121101;
-      export const VECTOR_1DOF: unsigned = 0x00121102;
-      export const VECTOR_2DOF: unsigned = 0x00121103;
-      export const VECTOR_3DOF: unsigned = 0x00121104;
-      export const QUATERNION: unsigned = 0x00121105;
-      export const STRING: unsigned = 0x00121106;
-      export const ENTITY: unsigned = 0x00121107;
-      export const BOOL: unsigned = 0x00121108;
-      export const COLOUR: unsigned = 0x00121109;
-      export const EVENT: unsigned = 0x0012110a;
-      export const EVENT_OBJECT: unsigned = 0x0012110b;
-      export const EVENT_OBJECT_DATA: unsigned = 0x0012110c;
-      export const EVENT_OBJECT_DATA_IMAGE: unsigned = 0x0012110d;
-      export const INT: unsigned = 0x0012110e;
-      export const QUATERNION_FORMAT: unsigned = 0x0012110f;
-      export const INTERPOLATION_MODE: unsigned = 0x00121110;
-      export const COMPRESSED_QUATERNION: unsigned = 0x00121111;
+      const FLOAT_1: unsigned = 0x00121100;
+      const FLOAT_2: unsigned = 0x00121101;
+      const VECTOR_1DOF: unsigned = 0x00121102;
+      const VECTOR_2DOF: unsigned = 0x00121103;
+      const VECTOR_3DOF: unsigned = 0x00121104;
+      const QUATERNION: unsigned = 0x00121105;
+      const STRING: unsigned = 0x00121106;
+      const ENTITY: unsigned = 0x00121107;
+      const BOOL: unsigned = 0x00121108;
+      const COLOUR: unsigned = 0x00121109;
+      const EVENT: unsigned = 0x0012110A;
+      const EVENT_OBJECT: unsigned = 0x0012110B;
+      const EVENT_OBJECT_DATA: unsigned = 0x0012110C;
+      const EVENT_OBJECT_DATA_IMAGE: unsigned = 0x0012110D;
+      const INT: unsigned = 0x0012110E;
+      const QUATERNION_FORMAT: unsigned = 0x0012110F;
+      const INTERPOLATION_MODE: unsigned = 0x00121110;
+      const COMPRESSED_QUATERNION: unsigned = 0x00121111;
     }
 
     // Channel Data 0x000121200-0x0001212ff
     export namespace FrameControllerData {
-      export const FRAME_CONTROLLER: unsigned = 0x000121200;
+      const FRAME_CONTROLLER: unsigned = 0x000121200;
     }
 
     // Chunk id from 0x000121300-0x0001213ff
     export namespace VertexAnim {
       export namespace OffsetList {
-        export const COLOUR: unsigned = 0x000121300;
-        export const VECTOR: unsigned = 0x000121301;
-        export const VECTOR2: unsigned = 0x000121302;
-        export const INDEX: unsigned = 0x000121303;
+        const COLOUR: unsigned = 0x000121300;
+        const VECTOR: unsigned = 0x000121301;
+        const VECTOR2: unsigned = 0x000121302;
+        const INDEX: unsigned = 0x000121303;
       }
-      export const KEY: unsigned = 0x000121304;
+      const KEY: unsigned = 0x000121304;
+
     }
     export namespace VertexSplineAnim {
       export namespace List {
-        export const VECTOR: unsigned = 0x000121400;
-        export const VECTOR2: unsigned = 0x000121401;
+        const VECTOR: unsigned = 0x000121400;
+        const VECTOR2: unsigned = 0x000121401;
       }
-      export const KEY: unsigned = 0x000121402;
+      const KEY: unsigned = 0x000121402;
     }
+
   }
-} // Pure3D
+}  // Pure3D
+
 
 // Simulation System 0x07000000 - 0x07ffffff
 export namespace Simulation {
   // Collision System 0x07010000 - 0x07010fff
   export namespace Collision {
-    export const OBJECT: unsigned = 0x07010000;
-    export const VOLUME: unsigned = 0x07010001;
-    export const SPHERE: unsigned = 0x07010002;
-    export const CYLINDER: unsigned = 0x07010003;
-    export const OBBOX: unsigned = 0x07010004;
-    export const WALL: unsigned = 0x07010005;
-    export const BBOX: unsigned = 0x07010006;
-    export const VECTOR: unsigned = 0x07010007;
-    export const SELFCOLLISION: unsigned = 0x07010020;
-    export const OWNER: unsigned = 0x07010021;
-    export const OWNERNAME: unsigned = 0x07010022;
-    export const ATTRIBUTE: unsigned = 0x07010023;
+    const OBJECT: unsigned = 0x07010000;
+    const VOLUME: unsigned = 0x07010001;
+    const SPHERE: unsigned = 0x07010002;
+    const CYLINDER: unsigned = 0x07010003;
+    const OBBOX: unsigned = 0x07010004;
+    const WALL: unsigned = 0x07010005;
+    const BBOX: unsigned = 0x07010006;
+    const VECTOR: unsigned = 0x07010007;
+    const SELFCOLLISION: unsigned = 0x07010020;
+    const OWNER: unsigned = 0x07010021;
+    const OWNERNAME: unsigned = 0x07010022;
+    const ATTRIBUTE: unsigned = 0x07010023;
   }
 
   // Physics System 0x07011000 - 0x07011fff
   export namespace Physics {
-    export const OBJECT: unsigned = 0x07011000;
-    export const IMAT: unsigned = 0x07011001;
-    export const VECTOR: unsigned = 0x07011002;
+    const OBJECT: unsigned = 0x07011000;
+    const IMAT: unsigned = 0x07011001;
+    const VECTOR: unsigned = 0x07011002;
 
-    export const JOINT: unsigned = 0x07011020;
-    export const JOINT_DOF: unsigned = 0x07011021;
+    const JOINT: unsigned = 0x07011020;
+    const JOINT_DOF: unsigned = 0x07011021;
   }
 
   // Flexible System 0x07012000 - 0x07012fff
   export namespace Flexible {
-    export const OBJECT: unsigned = 0x07012000;
-    export const OBJECT_PARAMETERS: unsigned = 0x07012001;
-    export const FIX_PARTICLE: unsigned = 0x07012002;
-    export const MAP_VL: unsigned = 0x07012003;
-    export const TRI_MAP: unsigned = 0x07012004;
-    export const EDGE_MAP: unsigned = 0x07012005;
-    export const EDGE_LEN: unsigned = 0x07012006;
-    export const OBJECT_LAMBDA: unsigned = 0x07012007;
-    export const JOINT: unsigned = 0x07012020;
-    export const JOINT_PARAMETERS: unsigned = 0x07012021;
-    export const JOINT_DEFINITION: unsigned = 0x07012022;
-    export const JOINT_LAMBDA: unsigned = 0x07012023;
+    const OBJECT: unsigned = 0x07012000;
+    const OBJECT_PARAMETERS: unsigned = 0x07012001;
+    const FIX_PARTICLE: unsigned = 0x07012002;
+    const MAP_VL: unsigned = 0x07012003;
+    const TRI_MAP: unsigned = 0x07012004;
+    const EDGE_MAP: unsigned = 0x07012005;
+    const EDGE_LEN: unsigned = 0x07012006;
+    const OBJECT_LAMBDA: unsigned = 0x07012007;
+    const JOINT: unsigned = 0x07012020;
+    const JOINT_PARAMETERS: unsigned = 0x07012021;
+    const JOINT_DEFINITION: unsigned = 0x07012022;
+    const JOINT_LAMBDA: unsigned = 0x07012023;
   }
 
   // IK System 0x07013000 - 0x07013fff
-  export namespace IK {}
+  export namespace IK {
+  }
 
   // Link System 0x07014000 - 0x07014fff
   export namespace Link {
-    export const IK: unsigned = 0x07014000;
-    export const REACH: unsigned = 0x07014001;
-    export const TRACKER: unsigned = 0x07014002;
-    export const TARGET: unsigned = 0x07014003;
-    export const TARGET_NODE: unsigned = 0x07014004;
-    export const TARGET_POSE: unsigned = 0x07014005;
+    const IK: unsigned = 0x07014000;
+    const REACH: unsigned = 0x07014001;
+    const TRACKER: unsigned = 0x07014002;
+    const TARGET: unsigned = 0x07014003;
+    const TARGET_NODE: unsigned = 0x07014004;
+    const TARGET_POSE: unsigned = 0x07014005;
   }
 
   // Param System 0x07015000 - 0x07015fff
   export namespace Parameters {
-    export const ENVIRONMENT: unsigned = 0x07015000;
-    export const PHYSICS: unsigned = 0x07015001;
+    const ENVIRONMENT: unsigned = 0x07015000;
+    const PHYSICS: unsigned = 0x07015001;
   }
 } // Simulation
+
 
 // SmartProp System 0x08000000 - 0x08ffffff
 export namespace SmartProp {
   // Collision System 0x08010000 - 0x08010fff
-  export const SMARTPROP: unsigned = 0x08010000;
-  export const SMARTPROPSTATEDATA: unsigned = 0x08010001;
-  export const SMARTPROPVISIBILITYDATA: unsigned = 0x08010002;
-  export const SMARTPROPFRAMECONTROLLERDATA: unsigned = 0x08010003;
-  export const SMARTPROPEVENTDATA: unsigned = 0x08010004;
-  export const SMARTPROPCALLBACKDATA: unsigned = 0x08010005;
-  export const SMARTPROPAPPLIEDFORCE: unsigned = 0x08010006;
-  export const SMARTPROPBREAKABLE: unsigned = 0x08010007;
-  export const SMARTPROPEXTRAATTRIBUTE: unsigned = 0x08010008;
+  const SMARTPROP: unsigned = 0x08010000;
+  const SMARTPROPSTATEDATA: unsigned = 0x08010001;
+  const SMARTPROPVISIBILITYDATA: unsigned = 0x08010002;
+  const SMARTPROPFRAMECONTROLLERDATA: unsigned = 0x08010003;
+  const SMARTPROPEVENTDATA: unsigned = 0x08010004;
+  const SMARTPROPCALLBACKDATA: unsigned = 0x08010005;
+  const SMARTPROPAPPLIEDFORCE: unsigned = 0x08010006;
+  const SMARTPROPBREAKABLE: unsigned = 0x08010007;
+  const SMARTPROPEXTRAATTRIBUTE: unsigned = 0x08010008;
 } // SmartProp
 // StateProp System 0x08000000 - 0x08ffffff
 export namespace StateProp {
-  export const STATEPROP: unsigned = 0x08020000;
-  export const STATEPROPSTATEDATA: unsigned = 0x08020001;
-  export const STATEPROPVISIBILITYDATA: unsigned = 0x08020002;
-  export const STATEPROPFRAMECONTROLLERDATA: unsigned = 0x08020003;
-  export const STATEPROPEVENTDATA: unsigned = 0x08020004;
-  export const STATEPROPCALLBACKDATA: unsigned = 0x08020005;
+  const STATEPROP: unsigned = 0x08020000;
+  const STATEPROPSTATEDATA: unsigned = 0x08020001;
+  const STATEPROPVISIBILITYDATA: unsigned = 0x08020002;
+  const STATEPROPFRAMECONTROLLERDATA: unsigned = 0x08020003;
+  const STATEPROPEVENTDATA: unsigned = 0x08020004;
+  const STATEPROPCALLBACKDATA: unsigned = 0x08020005;
 } // StateProp
 
+
 export namespace MemorySection {
-  export const MEMORYSECTION: unsigned = 0xffff0000;
+  const MEMORYSECTION: unsigned = 0xFFFF0000;
 }
 
-// #endif
+//? #endif
 
 /*===========================================================================
 
@@ -430,26 +434,26 @@ export namespace MemorySection {
 
  Example chunk ID file:
 
- namespace Pure3D
+ export namespace Pure3D
  {
  //-------- Animation System 0x00100000-0x00100fff
 
      //-------- Particle Systems 0x00100000-0x001000ff
-     const unsigned PARTICLE_SYSTEM                  = 0x00100000;
-     const unsigned EMITTER                          = 0x00100001;
-     const unsigned SIMPLE_EMITTER                   = 0x00100002;
-     const unsigned EMITTER_LIFE_CHANNEL             = 0x00100003;
-     const unsigned EMITTER_SPEED_CHANNEL            = 0x00100004;
-     const unsigned EMITTER_WEIGHT_CHANNEL           = 0x00100005;
-     const unsigned EMITTER_LIFE_VAR_CHANNEL         = 0x00100006;
-     const unsigned EMITTER_SPEED_VAR_CHANNEL        = 0x00100007;
-     const unsigned EMITTER_EMISSION_RATE_CHANNEL    = 0x00100008;
-     const unsigned S_EMITTER_SIZE_CHANNEL           = 0x00100009;
-     const unsigned S_EMITTER_SPIN_CHANNEL           = 0x0010000A;
-     const unsigned S_EMITTER_TRANSPARENCY_CHANNEL   = 0x0010000B;
-     const unsigned S_EMITTER_COLOUR_CHANNEL         = 0x0010000C;
-     const unsigned S_EMITTER_SIZE_VAR_CHANNEL       = 0x0010000D;
-     const unsigned S_EMITTER_SPIN_VAR_CHANNEL       = 0x0010000E;
+     const  PARTICLE_SYSTEM                 : unsigned = 0x00100000;
+     const  EMITTER                         : unsigned = 0x00100001;
+     const  SIMPLE_EMITTER                  : unsigned = 0x00100002;
+     const  EMITTER_LIFE_CHANNEL            : unsigned = 0x00100003;
+     const  EMITTER_SPEED_CHANNEL           : unsigned = 0x00100004;
+     const  EMITTER_WEIGHT_CHANNEL          : unsigned = 0x00100005;
+     const  EMITTER_LIFE_VAR_CHANNEL        : unsigned = 0x00100006;
+     const  EMITTER_SPEED_VAR_CHANNEL       : unsigned = 0x00100007;
+     const  EMITTER_EMISSION_RATE_CHANNEL   : unsigned = 0x00100008;
+     const  S_EMITTER_SIZE_CHANNEL          : unsigned = 0x00100009;
+     const  S_EMITTER_SPIN_CHANNEL          : unsigned = 0x0010000A;
+     const  S_EMITTER_TRANSPARENCY_CHANNEL  : unsigned = 0x0010000B;
+     const  S_EMITTER_COLOUR_CHANNEL        : unsigned = 0x0010000C;
+     const  S_EMITTER_SIZE_VAR_CHANNEL      : unsigned = 0x0010000D;
+     const  S_EMITTER_SPIN_VAR_CHANNEL      : unsigned = 0x0010000E;
  
      // next free 0x00100100
  

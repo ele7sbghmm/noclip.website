@@ -1,4 +1,4 @@
-import { float } from "./types.js";
+import { float } from "./type_aliases.js";
 
 export type tUID = string;
 
