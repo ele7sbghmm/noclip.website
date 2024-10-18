@@ -6,7 +6,7 @@ import { SceneContext } from "../SceneBase.js";
 import { FenceEntityDSG } from "./radical/dsg.js";
 
 class SceneDesc implements Viewer.SceneDesc {
-  constructor(public level: Level) { }
+  constructor(public id: string, public name: string, public level: Level) { }
 
   public async createScene(
     gfxDevice: GfxDevice,
@@ -16,7 +16,7 @@ class SceneDesc implements Viewer.SceneDesc {
 
     const p3ds = await Promise.all(
       this.level.files.map((file_name) =>
-        dataFetcher.fetchData(`shar/${id}/${file_name}`),
+        dataFetcher.fetchData(`${id}/${file_name}`),
       ),
     );
 
@@ -24,15 +24,19 @@ class SceneDesc implements Viewer.SceneDesc {
   }
 }
 
-type Level = { id: string; files: string[]; };
-const level7: Level = {
-  id: "l7",
-  files: ["L7_TERRA.P3D"],// "l1z1.p3d"],
-};
-
-const sceneDescs: SceneDesc[] = [new SceneDesc(level7)];
+type Level = { id: string; files: string[]; } | {};
+const levels: Level[] = [
+  {}, {}, {}, {}, {}, {}, {},
+  {
+    id: "l7",
+    files: ["L7_TERRA.P3D"],// "l7z1.p3d"],
+  },
+];
 
 const name = "The Simpsons: Hit & Run";
 const id = "shar";
 
+const sceneDescs: SceneDesc[] = [new SceneDesc(id, name, levels[7])];
+
 export const sceneGroup: Viewer.SceneGroup = { id, name, sceneDescs };
+

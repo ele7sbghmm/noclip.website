@@ -1,6 +1,4 @@
-import { unsigned } from "../types.js";
-
-// Simpsons\ Hit&Run/game/lib/pure3d/export constatnts/chunkids.hpp
+import { unsigned } from '../type_aliases.js';
 
 /*===========================================================================
     File:: chunksids.hpp
@@ -14,8 +12,8 @@ import { unsigned } from "../types.js";
     All rights reserved.
 ===========================================================================*/
 
-// #ifndef _CHUNKIDS_HPP
-// #define _CHUNKIDS_HPP
+//? #ifndef _CHUNKIDS_HPP
+//? #define _CHUNKIDS_HPP
 
 /*===========================================================================
  Project Ranges
@@ -34,10 +32,10 @@ import { unsigned } from "../types.js";
 ===========================================================================*/
 export namespace Pure3D {
   // The top level wrapper chunk IDs
-  export const DATA_FILE: unsigned = 0xff443350;
-  export const DATA_FILE_SWAP: unsigned = 0x503344ff; // P3D wrapper ID on big endian
-  export const DATA_FILE_COMPRESSED: unsigned = 0x5a443350;
-  export const DATA_FILE_COMPRESSED_SWAP: unsigned = 0x5033445a;
+  export const DATA_FILE: unsigned = 0xFF443350;
+  export const DATA_FILE_SWAP: unsigned = 0x503344FF;       // P3D wrapper ID on big endian
+  export const DATA_FILE_COMPRESSED: unsigned = 0x5A443350;
+  export const DATA_FILE_COMPRESSED_SWAP: unsigned = 0x5033445A;
 
   // Mesh System 0x00010000 - 0x00010fff
   export namespace Mesh {
@@ -51,12 +49,12 @@ export namespace Pure3D {
     export const UVLIST: unsigned = 0x00010007;
     export const COLOURLIST: unsigned = 0x00010008;
     export const STRIPLIST: unsigned = 0x00010009;
-    export const INDEXLIST: unsigned = 0x0001000a;
-    export const MATRIXLIST: unsigned = 0x0001000b;
-    export const WEIGHTLIST: unsigned = 0x0001000c;
-    export const MATRIXPALETTE: unsigned = 0x0001000d;
-    export const OFFSETLIST: unsigned = 0x0001000e;
-    export const INSTANCEINFO: unsigned = 0x0001000f;
+    export const INDEXLIST: unsigned = 0x0001000A;
+    export const MATRIXLIST: unsigned = 0x0001000B;
+    export const WEIGHTLIST: unsigned = 0x0001000C;
+    export const MATRIXPALETTE: unsigned = 0x0001000D;
+    export const OFFSETLIST: unsigned = 0x0001000E;
+    export const INSTANCEINFO: unsigned = 0x0001000F;
     export const PACKEDNORMALLIST: unsigned = 0x00010010;
     export const VERTEXSHADER: unsigned = 0x00010011;
     export const MEMORYIMAGEVERTEXLIST: unsigned = 0x00010012;
@@ -67,11 +65,11 @@ export namespace Pure3D {
     export const RENDERSTATUS: unsigned = 0x00010017;
     export const EXPRESSIONOFFSETS: unsigned = 0x00010018;
     export const SHADOWSKIN: unsigned = 0x00010019;
-    export const SHADOWMESH: unsigned = 0x0001001a;
-    export const TOPOLOGY: unsigned = 0x0001001b;
-    export const MULTICOLOURLIST: unsigned = 0x0001001c;
+    export const SHADOWMESH: unsigned = 0x0001001A;
+    export const TOPOLOGY: unsigned = 0x0001001B;
+    export const MULTICOLOURLIST: unsigned = 0x0001001C;
   }
-  // End Mesh System
+  // End Mesh System 
 
   // Shader System 0x00011000 - 0x00011fff
   export namespace Shader {
@@ -176,15 +174,15 @@ export namespace Pure3D {
     export const MULTITEXT: unsigned = 0x00018007;
     export const P3DOBJECT: unsigned = 0x00018008;
     export const POLYGON: unsigned = 0x00018009;
-    export const SPRITE: unsigned = 0x0001800a;
+    export const SPRITE: unsigned = 0x0001800A;
 
     //subobjects
-    export const STRINGTEXTBIBLE: unsigned = 0x0001800b;
-    export const STRINGHARDCODED: unsigned = 0x0001800c;
+    export const STRINGTEXTBIBLE: unsigned = 0x0001800B;
+    export const STRINGHARDCODED: unsigned = 0x0001800C;
 
     //text bible objects
-    export const TEXTBIBLE: unsigned = 0x0001800d;
-    export const LANGUAGE: unsigned = 0x0001800e;
+    export const TEXTBIBLE: unsigned = 0x0001800D;
+    export const LANGUAGE: unsigned = 0x0001800E;
 
     //resources
     export const RESOURCEIMAGE: unsigned = 0x00018100;
@@ -241,7 +239,7 @@ export namespace Pure3D {
     export const DRAWABLE: unsigned = 0x00120107;
     export const CAMERA: unsigned = 0x00120108;
     export const LIGHTGROUP: unsigned = 0x00120109;
-    export const SORTORDER: unsigned = 0x0012010a;
+    export const SORTORDER: unsigned = 0x0012010A;
   }
 
   // Animation 0x000121000-0x000121fff
@@ -266,12 +264,12 @@ export namespace Pure3D {
       export const ENTITY: unsigned = 0x00121107;
       export const BOOL: unsigned = 0x00121108;
       export const COLOUR: unsigned = 0x00121109;
-      export const EVENT: unsigned = 0x0012110a;
-      export const EVENT_OBJECT: unsigned = 0x0012110b;
-      export const EVENT_OBJECT_DATA: unsigned = 0x0012110c;
-      export const EVENT_OBJECT_DATA_IMAGE: unsigned = 0x0012110d;
-      export const INT: unsigned = 0x0012110e;
-      export const QUATERNION_FORMAT: unsigned = 0x0012110f;
+      export const EVENT: unsigned = 0x0012110A;
+      export const EVENT_OBJECT: unsigned = 0x0012110B;
+      export const EVENT_OBJECT_DATA: unsigned = 0x0012110C;
+      export const EVENT_OBJECT_DATA_IMAGE: unsigned = 0x0012110D;
+      export const INT: unsigned = 0x0012110E;
+      export const QUATERNION_FORMAT: unsigned = 0x0012110F;
       export const INTERPOLATION_MODE: unsigned = 0x00121110;
       export const COMPRESSED_QUATERNION: unsigned = 0x00121111;
     }
@@ -290,6 +288,7 @@ export namespace Pure3D {
         export const INDEX: unsigned = 0x000121303;
       }
       export const KEY: unsigned = 0x000121304;
+
     }
     export namespace VertexSplineAnim {
       export namespace List {
@@ -298,8 +297,10 @@ export namespace Pure3D {
       }
       export const KEY: unsigned = 0x000121402;
     }
+
   }
-} // Pure3D
+}  // Pure3D
+
 
 // Simulation System 0x07000000 - 0x07ffffff
 export namespace Simulation {
@@ -346,7 +347,8 @@ export namespace Simulation {
   }
 
   // IK System 0x07013000 - 0x07013fff
-  export namespace IK {}
+  export namespace IK {
+  }
 
   // Link System 0x07014000 - 0x07014fff
   export namespace Link {
@@ -364,6 +366,7 @@ export namespace Simulation {
     export const PHYSICS: unsigned = 0x07015001;
   }
 } // Simulation
+
 
 // SmartProp System 0x08000000 - 0x08ffffff
 export namespace SmartProp {
@@ -388,11 +391,12 @@ export namespace StateProp {
   export const STATEPROPCALLBACKDATA: unsigned = 0x08020005;
 } // StateProp
 
+
 export namespace MemorySection {
-  export const MEMORYSECTION: unsigned = 0xffff0000;
+  export const MEMORYSECTION: unsigned = 0xFFFF0000;
 }
 
-// #endif
+//? #endif
 
 /*===========================================================================
 
@@ -430,26 +434,26 @@ export namespace MemorySection {
 
  Example chunk ID file:
 
- namespace Pure3D
+ export namespace Pure3D
  {
  //-------- Animation System 0x00100000-0x00100fff
 
      //-------- Particle Systems 0x00100000-0x001000ff
-     const unsigned PARTICLE_SYSTEM                  = 0x00100000;
-     const unsigned EMITTER                          = 0x00100001;
-     const unsigned SIMPLE_EMITTER                   = 0x00100002;
-     const unsigned EMITTER_LIFE_CHANNEL             = 0x00100003;
-     const unsigned EMITTER_SPEED_CHANNEL            = 0x00100004;
-     const unsigned EMITTER_WEIGHT_CHANNEL           = 0x00100005;
-     const unsigned EMITTER_LIFE_VAR_CHANNEL         = 0x00100006;
-     const unsigned EMITTER_SPEED_VAR_CHANNEL        = 0x00100007;
-     const unsigned EMITTER_EMISSION_RATE_CHANNEL    = 0x00100008;
-     const unsigned S_EMITTER_SIZE_CHANNEL           = 0x00100009;
-     const unsigned S_EMITTER_SPIN_CHANNEL           = 0x0010000A;
-     const unsigned S_EMITTER_TRANSPARENCY_CHANNEL   = 0x0010000B;
-     const unsigned S_EMITTER_COLOUR_CHANNEL         = 0x0010000C;
-     const unsigned S_EMITTER_SIZE_VAR_CHANNEL       = 0x0010000D;
-     const unsigned S_EMITTER_SPIN_VAR_CHANNEL       = 0x0010000E;
+     export const  PARTICLE_SYSTEM: unsigned = 0x00100000;
+     export const  EMITTER: unsigned = 0x00100001;
+     export const  SIMPLE_EMITTER: unsigned = 0x00100002;
+     export const  EMITTER_LIFE_CHANNEL: unsigned = 0x00100003;
+     export const  EMITTER_SPEED_CHANNEL: unsigned = 0x00100004;
+     export const  EMITTER_WEIGHT_CHANNEL: unsigned = 0x00100005;
+     export const  EMITTER_LIFE_VAR_CHANNEL: unsigned = 0x00100006;
+     export const  EMITTER_SPEED_VAR_CHANNEL: unsigned = 0x00100007;
+     export const  EMITTER_EMISSION_RATE_CHANNEL: unsigned = 0x00100008;
+     export const  S_EMITTER_SIZE_CHANNEL: unsigned = 0x00100009;
+     export const  S_EMITTER_SPIN_CHANNEL: unsigned = 0x0010000A;
+     export const  S_EMITTER_TRANSPARENCY_CHANNEL: unsigned = 0x0010000B;
+     export const  S_EMITTER_COLOUR_CHANNEL: unsigned = 0x0010000C;
+     export const  S_EMITTER_SIZE_VAR_CHANNEL: unsigned = 0x0010000D;
+     export const  S_EMITTER_SPIN_VAR_CHANNEL: unsigned = 0x0010000E;
  
      // next free 0x00100100
  

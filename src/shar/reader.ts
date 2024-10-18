@@ -1,6 +1,6 @@
-import { NamedArrayBufferSlice } from "../DataFetcher.js";
 import { assert } from "../util.js";
-import { f32, u32, i32, u16, i16, u8, i8 } from "./util.js";
+import { NamedArrayBufferSlice } from "../DataFetcher.js";
+import { unsigned_int, unsigned, f32, u32, i32, u16, i16, u8, i8 } from "./type_aliases.js";
 
 export class BufReader {
   readonly name: string;
@@ -204,4 +204,10 @@ export class BufReader {
     if (!peek) this.offs += byteSize;
     return num;
   }
+
+  // radical convention
+  public Advance(offset: unsigned) { this.seek(offset); }
+  public GetPosition(): unsigned_int { return this.get_offs(); }
+  public GetSize(): unsigned_int { return this.get_len(); }
 }
+
