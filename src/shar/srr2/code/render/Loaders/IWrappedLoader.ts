@@ -1,3 +1,3 @@
 
-export class IWrappedLoader { }
+export interface IWrappedLoader { }
 

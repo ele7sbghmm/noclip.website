@@ -4,8 +4,9 @@ import { tChunkFile } from './chunkfile.js';
 import { tEntityStore } from './inventory.js';
 import { radLoadManagerWrapper, ILoadManager } from '../../radcontent/src/radload/radload.js';
 import { radLoadFileLoader, radLoadDataLoader } from '../../radcontent/src/radload/loader.js';
+import { tRefCounted } from './refcounted.js';
 
-enum tLoadStatus { LOAD_OK, LOAD_ERROR };
+export enum tLoadStatus { LOAD_OK, LOAD_ERROR };
 
 // radLoadManagerWrapper radLoad;
 const radLoad: radLoadManagerWrapper = ILoadManager.s_instance;
@@ -15,6 +16,7 @@ class tFileHandler extends radLoadFileLoader {
 }
 class tChunkHandler extends radLoadDataLoader {
   public Load(file: tChunkFile, store: tEntityStore): tLoadStatus { return tLoadStatus.LOAD_OK; }
+  public GetChunkID() { }
 }
 export class tSimpleChunkHandler extends tChunkHandler {
   constructor(public _id: number) { super(); }
@@ -23,14 +25,12 @@ export class tSimpleChunkHandler extends tChunkHandler {
 }
 export class tP3DFileHandler extends tFileHandler {
   public override Load(file: tChunkFile, store: tEntityStore): tLoadStatus { return tLoadStatus.LOAD_OK; }
-  public AddHandler(l: tChunkHandler): tChunkHandler;
-  public AddHandler(l: tChunkHandler, chunkID: unsigned): tChunkHandler;
   public AddHandler(l: tChunkHandler, chunkID?: unsigned): tChunkHandler {
     radLoad.AddDataLoader(l, chunkID ? chunkID : l.GetChunkID());
     return l;
   }
 }
-export class tLoadManager { // tRefCounted
+export class tLoadManager extends tRefCounted {
   public AddHandler(l: tFileHandler, ext: char_p): tFileHandler {
     radLoad.AddFileLoader(l, ext);
     return l;

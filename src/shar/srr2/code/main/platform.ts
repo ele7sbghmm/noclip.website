@@ -1,7 +1,6 @@
 
-export class Platform { // IRadDriveErrorCallback
-  public InitializePure3D() {
-
-  }
+export interface Platform { // IRadDriveErrorCallback
+  InitializePlatform(): void;
+  InitializePure3D(): void;
 }
 

@@ -23,7 +23,7 @@ export class AllWrappers {
       switch (i) {
         case AllWrappers.Enum.msFenceEntity: {
           pWL = new FenceLoader();
-          // pWL.AddRef();
+          pWL.AddRef();
           this.mpLoaders[i] = pWL;
           break;
         }
