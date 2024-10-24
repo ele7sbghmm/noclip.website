@@ -1,4 +1,5 @@
 import { int } from '../../../../type_aliases.js';
+
 import { IWrappedLoader } from './IWrappedLoader.js';
 import { FenceLoader } from './FenceLoader.js';
 
@@ -23,7 +24,7 @@ export class AllWrappers {
       switch (i) {
         case AllWrappers.Enum.msFenceEntity: {
           pWL = new FenceLoader();
-          pWL.AddRef();
+          // pWL.AddRef();
           this.mpLoaders[i] = pWL;
           break;
         }
@@ -34,27 +35,27 @@ export class AllWrappers {
 
 export namespace AllWrappers {
   export enum Enum {
-    // msGeometry,
-    // msStaticEntity,
-    // msStaticPhys,
-    // msTreeDSG,
+    msGeometry,
+    msStaticEntity,
+    msStaticPhys,
+    msTreeDSG,
     msFenceEntity,
-    // msIntersectDSG,
-    // msAnimCollEntity,
-    // msAnimEntity,
-    // msDynaPhys,
-    // msInstStatEntity,
-    // msInstStatPhys,
-    // msLocator,
-    // msWorldSphere,
-    // msRoadSegment,
-    // msPathSegment,
-    // msBillboard,
-    // msInstParticleSystem,
-    // msBreakableObject,
-    // msLensFlare,
-    // msAnimDynaPhys,
-    // msAnimDynaPhysWrapper,
+    msIntersectDSG,
+    msAnimCollEntity,
+    msAnimEntity,
+    msDynaPhys,
+    msInstStatEntity,
+    msInstStatPhys,
+    msLocator,
+    msWorldSphere,
+    msRoadSegment,
+    msPathSegment,
+    msBillboard,
+    msInstParticleSystem,
+    msBreakableObject,
+    msLensFlare,
+    msAnimDynaPhys,
+    msAnimDynaPhysWrapper,
     msNumWrappers
   };
 }

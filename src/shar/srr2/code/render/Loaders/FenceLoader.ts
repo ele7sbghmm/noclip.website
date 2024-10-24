@@ -1,9 +1,12 @@
 import { unsigned_int } from '../../../../type_aliases.js';
 
 import { SRR2 } from '../../constants/srrchunks.js';
+
+import { GetRenderManager } from '../RenderManager/RenderManager.js';
 import { FenceEntityDSG } from '../DSG/FenceEntityDSG.js';
 import { IWrappedLoader } from './IWrappedLoader.js';
 import { BoxPts } from '../Culling/BoxPts.js';
+
 import { tSimpleChunkHandler } from '../../../libs/pure3d/p3d/loadmanager.js';
 import { tChunkFile } from '../../../libs/pure3d/p3d/chunkfile.js';
 import { tEntityStore } from '../../../libs/pure3d/p3d/inventory.js';
