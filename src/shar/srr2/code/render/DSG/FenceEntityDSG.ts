@@ -1,4 +1,5 @@
 import { CollisionEntityDSG } from './collisionentitydsg.js';
+import { rmt } from '../../../libs/radmath/radmath/vector.js';
 
 export class FenceEntityDSG extends CollisionEntityDSG {
   public mStartPoint: rmt.Vector;

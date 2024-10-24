@@ -1,8 +1,6 @@
 import { float } from '../../../../type_aliases.js';
 
-export const rmt = RadicalMathLibrary;
-
-export namespace RadicalMathLibrary {
+export namespace rmt { // RadicalMathLibrary {
   export class Vector {
     constructor(
       public x: float,

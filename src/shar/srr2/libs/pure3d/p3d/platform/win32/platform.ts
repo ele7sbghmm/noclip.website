@@ -4,18 +4,21 @@ import { int } from '../../../../../../type_aliases.js';
 import { p3d_ } from '../../utility.js';
 import { tContext } from '../../context.js';
 
+class tPlatformContext {
+  public context: tContext;
+}
 export class tPlatform {
   public static currentPlatform: tPlatform;
   public instance: any;
   public currentContext: tContext;
   public nContexts: int;
+  public contexts: tPlatformContext[]; // [P3D_MAX_CONTEXTS]
 
   constructor(inst: any) {
     this.instance = inst;
     // this.currentContext = null;
     this.nContexts = 0;
   }
-
   public static Create(instance: any): tPlatform {
     if (!tPlatform.currentPlatform) {
       tPlatform.currentPlatform = new tPlatform(instance);
@@ -23,8 +26,15 @@ export class tPlatform {
     }
     return tPlatform.currentPlatform;
   }
+  public CreateContext(/* d: tContextInitData */) {
+    for (let find = 0; find < 1; find++) {
+      this.contexts[find].context = new tContext();
+
+      this.SetActiveContext(this.contexts[find].context);
+    }
+  }
   public SetActiveContext(context: tContext) {
-    // assert(context); // P3DASSERT( context );
+    // P3DASSERT( context );
 
     this.currentContext = context;
 

@@ -1,9 +1,14 @@
+import { unsigned_int, const_char_p } from '../../../../../type_aliases.js';
 
-export class ILoadManager {
-  public static s_instance: ILoadManager;
+import { radLoadFileLoader, radLoadDataLoader } from './loader.js';
 
-  public AddFileLoader() { }
-  public AddDataLoader() { }
+type radLoadClassID = unsigned_int;
+
+export abstract class ILoadManager {
+  static s_instance: ILoadManager;
+
+  public abstract AddFileLoader(fileLoader: radLoadFileLoader, extension: const_char_p): void;
+  public abstract AddDataLoader(dataLoader: radLoadDataLoader, id: radLoadClassID): void;
 }
-export class radLoadManagerWrapper { }
+export const radLoadManagerWrapper = ILoadManager.s_instance;
 
