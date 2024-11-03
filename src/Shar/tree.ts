@@ -1,56 +1,56 @@
-import { Reader, read_vector, read_matrix } from './reader.js'
+import { read_vector } from './reader.js'
 import { tChunkFile } from './chunkfile.js'
-import { SpatialNode } from './spatialnode.js'
+import { ContiguousBinNode, SpatialTree, SpatialNode } from './spatial.js'
+import { Bounds3f, FixedArray, AAPlane3f, tEntity } from './rad_util.js'
 
 import { SRR2 } from './srrchunks.js'
 
-class Tree {
+export class TreeDSGLoader extends tEntity {
     public load_object(f: tChunkFile) {
-        let mData = f.GetLong()
+        const nNodes = f.GetLong()
 
-        let mMin = read_vector(f.realFile)
-        let mMax = read_vector(f.realFile)
+        const bounds: Bounds3f = {
+            mMin: read_vector(f.realFile),
+            mMax: read_vector(f.realFile),
+        }
 
-        //SpatialTree* pSpatialTree = new SpatialTree
-        //pSpatialTree->SetTo(nNodes,bounds)
-        //ContiguousBinNode< SpatialNode >* pCurNode=pSpatialTree->GetRoot()
-        //
-        let pCurMode: any[][]
+        const pSpatialTree = new SpatialTree()
+        pSpatialTree.SetTo(nNodes, bounds)
+
+        const pCurNode: ContiguousBinNode<SpatialNode> = pSpatialTree.GetRoot()
 
         switch (f.GetCurrentID()) {
             case SRR2.ChunkID.CONTIGUOUS_BIN_NODE: {
-                let pCurNode = new SpatialNode()
-
-                //this.pCurNode.SetSubTreeSize(f.GetLong())
-                //this.pCurNode.LinkParent(f.GetLong())
-                f.GetLong()
-                f.GetLong()
+                pCurNode.SetSubTreeSize(f.GetLong())
+                pCurNode.LinkParent(f.GetLong())
 
                 f.BeginChunk()
 
-                pCurNode.mSubDivPlane.mAxis = f.GetChar()
-                pCurNode.mSubDivPlane.mPosn = f.GetFloat()
-                pCurNode.mSEntityElems.mUseSize = f.GetLong()
-                pCurNode.mSPhysElems.mUseSize = f.GetLong()
-                pCurNode.mIntersectElems.mUseSize = f.GetLong()
-                pCurNode.mDPhysElems.mUseSize = f.GetLong()
-                pCurNode.mFenceElems.mUseSize = f.GetLong()
-                pCurNode.mRoadSegmentElems.mUseSize = f.GetLong()
-                pCurNode.mPathSegmentElems.mUseSize = f.GetLong()
-                pCurNode.mAnimElems.mUseSize = f.GetLong() + 1
-                pCurNode.mAnimCollElems.mUseSize = 1
+                pCurNode.mData.mSubDivPlane.mAxis = f.GetChar()
+                pCurNode.mData.mSubDivPlane.mPosn = f.GetFloat()
+                pCurNode.mData.mSEntityElems.mUseSize = f.GetLong()
+                pCurNode.mData.mSPhysElems.mUseSize = f.GetLong()
+                pCurNode.mData.mIntersectElems.mUseSize = f.GetLong()
+                pCurNode.mData.mDPhysElems.mUseSize = f.GetLong()
+                pCurNode.mData.mFenceElems.mUseSize = f.GetLong()
+                pCurNode.mData.mRoadSegmentElems.mUseSize = f.GetLong()
+                pCurNode.mData.mPathSegmentElems.mUseSize = f.GetLong()
+                pCurNode.mData.mAnimElems.mUseSize = f.GetLong() + 1
+                pCurNode.mData.mAnimCollElems.mUseSize = 1
 
                 f.EndChunk()
 
                 if (pCurNode.IsRoot()) {
-                    pCurNode.mSEntityElems.mUseSize += 100
-                    pCurNode.mDPhysElems.mUseSize += 10
-                    pCurNode.mAnimCollElems.mUseSize += 50
-                    pCurNode.mAnimElems.mUseSize += 60
+                    pCurNode.mData.mSEntityElems.mUseSize += 100
+                    pCurNode.mData.mDPhysElems.mUseSize += 10
+                    pCurNode.mData.mAnimCollElems.mUseSize += 50
+                    pCurNode.mData.mAnimElems.mUseSize += 60
                 }
 
                 break
             }
         }
+
+        f.EndChunk()
     }
 }

@@ -1,4 +1,3 @@
-import { Reader } from './reader.js'
 
 export class Vector {
     constructor(
@@ -15,3 +14,4 @@ export class Matrix {
         public m30: number, public m31: number, public m32: number, public m33: number,
     ) { }
 }
+
