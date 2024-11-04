@@ -46,11 +46,38 @@ export class ContiguousBinNode<T> /* extends Array<T> */ {
     public mData: T
     public mSubTreeSize: number
     public mParentOffset: number
+    // enum
     private msNoChildren = 0
     private msNoParent = 0
 
     public LinkParent(iParentOffset: number) { this.mParentOffset = iParentOffset }
     public SetSubTreeSize(iSubTreeSize: number) { this.mSubTreeSize = iSubTreeSize }
     public IsRoot(): boolean { return this.mParentOffset == this.msNoParent }
+    public GetSubTreeSize() { return this.mSubTreeSize }
+    public LChild() { } // : ContiguousBinNode { this + 1 }
+    public RChild() { } // : ContiguousBinNode { (this + 1).RSibling() }
+    public LChilfOffset() { return 1 }
+    public RChilfOffset() { return this.LChild().RSiblingOffset() + 1 }
+}
+export class SpatialTreeIter {
+    public mBBox: BoxPts
+    public mpRootNode: ContiguousBinNode<SpatialNode>
+    public mpCurNode: ContiguousBinNode<SpatialNode>
+
+    public rBBox() { return this.mBBox }
+    public BuildBBoxes(iBoxPts: BoxPts, iCurNodeOffset: number) {
+        const pCurNode: ContiguousBinNode<SpatialNode> = (this.mpRootNode + iCurNodeOffset)
+
+        pCurNode.mData.mBBox = iBoxPts
+
+        if (pCurNode.GetSubTreeSize() > 0) {
+            iBoxPts.CutOffGT(pCurNode.mData.mSubDivPlane)
+            //this.BuildBBoxes(iBoxPts, iCurNodeOffset + pCurNode.LChildOffset())
+
+            iBoxPts = pCurNode.mData.mBBox
+            iBoxPts.CutOffLT(pCurNode.mData.mSubDivPlane)
+            //this.BuildBBoxes(iBoxPts, iCurNodeOffset + pCurNode.RChildOffset())
+        }
+    }
 }
 

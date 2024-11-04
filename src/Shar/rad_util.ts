@@ -35,4 +35,25 @@ export class SwapArray<T> {
     }
 }
 export class NodeSwapArray<T> extends SwapArray<T> { }
-export type BoxPts = {}
+export class BoxPts {
+    mBounds: Bounds3f
+
+    public CutOffGT(irPlane3f: AAPlane3f) {
+        //if (this.mBounds.mMax[irPlane3f.mAxis] > irPlane3f.mPosn) {
+        //    this.mBounds.mMax[irPlane3f.mAxis] = irPlane3f.mPosn
+        //
+        //    if (this.mBounds.mMin[irPlane3f.mAxis] > irPlane3f.mPosn) {
+        //        this.mBounds.mMin[irPlane3f.mAxis] = irPlane3f.mPosn
+        //    }
+        //}
+    }
+    public CutOffLT(irPlane3f: AAPlane3f) {
+        //if (this.mBounds.mMin[irPlane3f.mAxis] < irPlane3f.mPosn) {
+        //    this.mBounds.mMin[irPlane3f.mAxis] = irPlane3f.mPosn
+        //
+        //    if (this.mBounds.mMax[irPlane3f.mAxis] < irPlane3f.mPosn) {
+        //        this.mBounds.mMax[irPlane3f.mAxis] = irPlane3f.mPosn
+        //    }
+        //}
+    }
+}

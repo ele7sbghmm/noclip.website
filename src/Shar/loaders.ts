@@ -1,7 +1,7 @@
 import { read_vector } from './reader.js'
 import { tChunkFile } from './chunkfile.js'
 import { ContiguousBinNode, SpatialTree, SpatialNode } from './spatial.js'
-import { Bounds3f, FixedArray, AAPlane3f, tEntity } from './rad_util.js'
+import { Bounds3f, tEntity } from './rad_util.js'
 
 import { SRR2 } from './srrchunks.js'
 
