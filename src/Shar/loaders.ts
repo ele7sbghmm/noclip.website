@@ -23,43 +23,47 @@ export class TreeDSGLoader extends tSimpleChunkHandler {
         const pSpatialTree = new SpatialTree()
         pSpatialTree.SetTo(nNodes, bounds)
 
-        const pCurNode: ContiguousBinNode<SpatialNode> = pSpatialTree.GetRoot()
+        const pCurNode: ContiguousBinNode<SpatialNode>[] = pSpatialTree.GetRoot()
 
-        switch (f.GetCurrentID()) {
-            case SRR2.ChunkID.CONTIGUOUS_BIN_NODE: {
-                pCurNode.SetSubTreeSize(f.GetLong())
-                pCurNode.LinkParent(f.GetLong())
+        for (let i = 0; f.ChunksRemaining(); i++) {
+            f.BeginChunk()
 
-                f.BeginChunk()
+            switch (f.GetCurrentID()) {
+                case SRR2.ChunkID.CONTIGUOUS_BIN_NODE: {
+                    pCurNode[i].SetSubTreeSize(f.GetLong())
+                    pCurNode[i].LinkParent(f.GetLong())
 
-                pCurNode.mData.mSubDivPlane.mAxis = f.GetChar()
-                pCurNode.mData.mSubDivPlane.mPosn = f.GetFloat()
-                pCurNode.mData.mSEntityElems.mUseSize = f.GetLong()
-                pCurNode.mData.mSPhysElems.mUseSize = f.GetLong()
-                pCurNode.mData.mIntersectElems.mUseSize = f.GetLong()
-                pCurNode.mData.mDPhysElems.mUseSize = f.GetLong()
-                pCurNode.mData.mFenceElems.mUseSize = f.GetLong()
-                pCurNode.mData.mRoadSegmentElems.mUseSize = f.GetLong()
-                pCurNode.mData.mPathSegmentElems.mUseSize = f.GetLong()
-                pCurNode.mData.mAnimElems.mUseSize = f.GetLong() + 1
-                pCurNode.mData.mAnimCollElems.mUseSize = 1
+                    f.BeginChunk()
 
-                f.EndChunk()
+                    pCurNode[i].mData.mSubDivPlane.mAxis = f.GetChar()
+                    pCurNode[i].mData.mSubDivPlane.mPosn = f.GetFloat()
+                    pCurNode[i].mData.mSEntityElems.mUseSize = f.GetLong()
+                    pCurNode[i].mData.mSPhysElems.mUseSize = f.GetLong()
+                    pCurNode[i].mData.mIntersectElems.mUseSize = f.GetLong()
+                    pCurNode[i].mData.mDPhysElems.mUseSize = f.GetLong()
+                    pCurNode[i].mData.mFenceElems.mUseSize = f.GetLong()
+                    pCurNode[i].mData.mRoadSegmentElems.mUseSize = f.GetLong()
+                    pCurNode[i].mData.mPathSegmentElems.mUseSize = f.GetLong()
+                    pCurNode[i].mData.mAnimElems.mUseSize = f.GetLong() + 1
+                    pCurNode[i].mData.mAnimCollElems.mUseSize = 1
 
-                if (pCurNode.IsRoot()) {
-                    pCurNode.mData.mSEntityElems.mUseSize += 100
-                    pCurNode.mData.mDPhysElems.mUseSize += 10
-                    pCurNode.mData.mAnimCollElems.mUseSize += 50
-                    pCurNode.mData.mAnimElems.mUseSize += 60
+                    f.EndChunk()
+
+                    if (pCurNode[i].IsRoot()) {
+                        pCurNode[i].mData.mSEntityElems.mUseSize += 100
+                        pCurNode[i].mData.mDPhysElems.mUseSize += 10
+                        pCurNode[i].mData.mAnimCollElems.mUseSize += 50
+                        pCurNode[i].mData.mAnimElems.mUseSize += 60
+                    }
+
+                    break
                 }
-
-                break
             }
-
-                f.EndChunk()
+            f.EndChunk()
         }
+
         //mpListenerCB.OnChunkLoaded(pSpatialTree, mUserData, _id)
-        return new tEntity()
+        return pSpatialTree
     }
 }
 

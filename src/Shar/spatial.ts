@@ -33,11 +33,14 @@ export class SpatialNode {
 export class SpatialTree extends tEntity {
     public mTreeNodes: FixedArray<ContiguousBinNode<SpatialNode>>
     public mTreeBounds: Bounds3f
+
     public SetTo(iNumNodes: number, iTreeBounds: Bounds3f) {
-        this.mTreeNodes = new Array(iNumNodes) as FixedArray<ContiguousBinNode<SpatialNode>>
+        this.mTreeNodes.Allocate(iNumNodes)
         this.mTreeBounds = iTreeBounds
     }
-    public GetRoot(): ContiguousBinNode<SpatialNode> { return this.mTreeNodes.mpData[0] }
+    public GetRoot(): ContiguousBinNode<SpatialNode>[] {
+        return this.mTreeNodes.mpData
+    }
 }
 export class ContiguousBinNode<T> /* extends Array<T> */ {
     public mData: T
