@@ -1,4 +1,4 @@
-import { BoxPts, FixedArray, NodeSwapArray, SwapArray, AAPlane3f, Bounds3f } from './rad_util.js'
+import { BoxPts, FixedArray, NodeSwapArray, SwapArray, AAPlane3f, Bounds3f, tEntity } from './rad_util.js'
 
 type StaticEntityDSG = any
 type StaticPhysDSG = any
@@ -30,7 +30,7 @@ export class SpatialNode {
     public IsRoot(): boolean { return true }
 }
 
-export class SpatialTree {
+export class SpatialTree extends tEntity {
     public mTreeNodes: FixedArray<ContiguousBinNode<SpatialNode>>
     public mTreeBounds: Bounds3f
     public SetTo(iNumNodes: number, iTreeBounds: Bounds3f) {

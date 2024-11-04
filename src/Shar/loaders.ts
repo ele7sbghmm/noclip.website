@@ -5,8 +5,14 @@ import { Bounds3f, FixedArray, AAPlane3f, tEntity } from './rad_util.js'
 
 import { SRR2 } from './srrchunks.js'
 
-export class TreeDSGLoader extends tEntity {
-    public load_object(f: tChunkFile) {
+enum tLoadStatus { LOAD_OK, LOAD_ERROR }
+abstract class tSimpleChunkHandler {
+    _id: number
+    status: tLoadStatus
+    abstract LoadObject(f: tChunkFile): tEntity
+}
+export class TreeDSGLoader extends tSimpleChunkHandler {
+    public LoadObject(f: tChunkFile): tEntity {
         const nNodes = f.GetLong()
 
         const bounds: Bounds3f = {
@@ -49,8 +55,11 @@ export class TreeDSGLoader extends tEntity {
 
                 break
             }
-        }
 
-        f.EndChunk()
+                f.EndChunk()
+        }
+        //mpListenerCB.OnChunkLoaded(pSpatialTree, mUserData, _id)
+        return new tEntity()
     }
 }
+
