@@ -12,6 +12,9 @@ type RoadSegment = any
 type PathSegment = any
 
 export class SpatialNode {
+    public _SetSubTreeSize: number
+    public _LinkParent: number
+
     public mSubDivPlane: AAPlane3f
 
     public mSEntityElems: NodeSwapArray<StaticEntityDSG>
@@ -29,7 +32,7 @@ export class SpatialNode {
 
     public IsRoot(): boolean { return true }
 }
-
+/*
 export class SpatialTree extends tEntity {
     public mTreeNodes: FixedArray<ContiguousBinNode<SpatialNode>>
     public mTreeBounds: Bounds3f
@@ -42,7 +45,8 @@ export class SpatialTree extends tEntity {
         return this.mTreeNodes.mpData
     }
 }
-export class ContiguousBinNode<T> /* extends Array<T> */ {
+
+export class ContiguousBinNode<T> {
     public mData: T
     public mSubTreeSize: number
     public mParentOffset: number
@@ -80,4 +84,4 @@ export class SpatialTreeIter {
         }
     }
 }
-
+*/

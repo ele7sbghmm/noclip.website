@@ -92,6 +92,7 @@ import * as Scenes_SuperMonkeyBall from './SuperMonkeyBall/Scenes_SuperMonkeyBal
 import * as Scenes_DragonQuest8 from './DragonQuest8/scenes.js';
 import * as Scenes_Morrowind from './Morrowind/Scenes.js';
 import * as Scenes_EstrangedActI from './SourceEngine/Scenes_EstrangedActI.js';
+import * as Scenes_Shar from './Shar/scenes.js';
 
 import { DroppedFileSceneDesc, traverseFileSystemDataTransfer } from './Scenes_FileDrops.js';
 
@@ -116,6 +117,7 @@ import { WebXRContext } from './WebXR.js';
 import { debugJunk } from './DebugJunk.js';
 
 const sceneGroups: (string | SceneGroup)[] = [
+    Scenes_Shar.sceneGroup,
     "Wii",
     Scenes_MarioKartWii.sceneGroup,
     Scenes_KirbysReturnToDreamLand.sceneGroup,
@@ -419,7 +421,7 @@ class Main {
         if (inputManager.isKeyDownEventTriggered('KeyT'))
             this.ui.sceneSelect.expandAndFocus();
         for (let i = 1; i <= 9; i++) {
-            if (inputManager.isKeyDownEventTriggered('Digit'+i)) {
+            if (inputManager.isKeyDownEventTriggered('Digit' + i)) {
                 if (this.currentSceneDesc) {
                     const key = this._getSaveStateSlotKey(i);
                     const action = this.pickSaveStatesAction(inputManager);
@@ -454,7 +456,7 @@ class Main {
                 this.webXRContext.xrSession.addEventListener('end', () => {
                     this.ui.toggleWebXRCheckbox(false);
                 });
-            } catch(e) {
+            } catch (e) {
                 console.error("Failed to start XR");
                 this.ui.toggleWebXRCheckbox(false);
             }

@@ -1,3 +1,4 @@
+/*
 import { read_vector } from './reader.js'
 import { tChunkFile } from './chunkfile.js'
 import { ContiguousBinNode, SpatialTree, SpatialNode } from './spatial.js'
@@ -66,4 +67,4 @@ export class TreeDSGLoader extends tSimpleChunkHandler {
         return pSpatialTree
     }
 }
-
+*/

@@ -20,11 +20,14 @@ export class tChunkFile {
     public chunkStack: Chunk[];
     public stackTop: number;
 
-    constructor(public realFile: tFile) {
-
+    constructor(public realFile: tFile, skip: boolean = false) {
+        if (skip) {
+            this.BeginChunk()
+            return
+        }
         let fileChunk: number = this.realFile.u32()
+        this.BeginChunk_overload(fileChunk)
 
-        this.BeginChunk_overload(fileChunk);
     }
     public ChunksRemaining(): boolean {
         let chunk: Chunk = this.chunkStack[this.stackTop];
