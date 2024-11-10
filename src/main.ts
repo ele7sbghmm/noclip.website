@@ -3,6 +3,7 @@
 
 import { Viewer, SceneGfx, InitErrorCode, initializeViewer, makeErrorUI, resizeCanvas, ViewerUpdateInfo } from './viewer.js';
 
+import * as Scenes_Shar from './Shar/scenes.js';
 import * as Scenes_BanjoKazooie from './BanjoKazooie/scenes.js';
 import * as Scenes_ZeldaTwilightPrincess from './ZeldaTwilightPrincess/Main.js';
 import * as Scenes_MarioKartDoubleDash from './j3d/mkdd_scenes.js';
@@ -92,7 +93,6 @@ import * as Scenes_SuperMonkeyBall from './SuperMonkeyBall/Scenes_SuperMonkeyBal
 import * as Scenes_DragonQuest8 from './DragonQuest8/scenes.js';
 import * as Scenes_Morrowind from './Morrowind/Scenes.js';
 import * as Scenes_EstrangedActI from './SourceEngine/Scenes_EstrangedActI.js';
-import * as Scenes_Shar from './Shar/scenes.js';
 
 import { DroppedFileSceneDesc, traverseFileSystemDataTransfer } from './Scenes_FileDrops.js';
 

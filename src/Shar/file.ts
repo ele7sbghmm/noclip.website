@@ -15,25 +15,21 @@ export class tFile extends Reader {
     public GetPosition() { return this.get_offset() }
     public Advance(offs: number) { return this.seek(offs) }
 }
-
 export class tChunkFile {
-    public chunkStack: Chunk[];
-    public stackTop: number;
+    public chunkStack: Chunk[] = []
+    public stackTop: number = -1;
 
-    constructor(public realFile: tFile, skip: boolean = false) {
-        if (skip) {
-            this.BeginChunk()
-            return
+    constructor(public realFile: tFile) {
+        for (let i = 0; i < CHUNK_STACK_SIZE; i++) {
+            this.chunkStack.push({ id: 0, dataLength: 0, chunkLength: 0, startPosition: 0 })
         }
         let fileChunk: number = this.realFile.u32()
         this.BeginChunk_overload(fileChunk)
-
     }
     public ChunksRemaining(): boolean {
         let chunk: Chunk = this.chunkStack[this.stackTop];
         return (chunk.chunkLength > chunk.dataLength)
             && (this.realFile.GetPosition() < (chunk.startPosition + chunk.chunkLength));
-
     }
     public BeginChunk_overload(chunkID: number): number {
         this.stackTop++;
@@ -47,7 +43,6 @@ export class tChunkFile {
         return this.chunkStack[this.stackTop].id;
     }
     public BeginChunk() {
-
         this.stackTop++;
         assert(this.stackTop < CHUNK_STACK_SIZE);
 
@@ -86,7 +81,7 @@ export class tChunkFile {
     public GetCurrentOffset(): number { return this.realFile.GetPosition() - this.chunkStack[this.stackTop].startPosition - HEADER_SIZE }
 
     public GetFloat(): number { return this.realFile.f32() }
-    public GetLong(): number { return this.realFile.u32() }
+    public GetLong(): number { return this.realFile.i32() }
     public GetUInt(): number { return this.realFile.u32() }
     public GetInt(): number { return this.realFile.i32() }
     public GetUShort(): number { return this.realFile.u16() }
@@ -95,3 +90,4 @@ export class tChunkFile {
     public GetChar(): number { return this.realFile.i8() }
 }
 
+export class tSimpleChunkHandler { }

@@ -185,7 +185,8 @@ export class Scene implements Viewer.SceneGfx {
     private renderHelper: GfxRenderHelper;
     private renderInstListMain = new GfxRenderInstList();
 
-    constructor(device: GfxDevice, public ivs: IV.IV[]) {
+    constructor(device: GfxDevice, public tree: any[]) {
+        console.log(`<<<<< Scene.constructor >>>>`)
         this.renderHelper = new GfxRenderHelper(device);
         this.program = this.renderHelper.renderCache.createProgram(new IVProgram());
 
@@ -201,9 +202,9 @@ export class Scene implements Viewer.SceneGfx {
         const cache = this.renderHelper.renderCache;
         this.inputLayout = cache.createInputLayout({ vertexAttributeDescriptors, vertexBufferDescriptors, indexBufferFormat });
 
-        this.ivRenderers = this.ivs.map((iv) => {
-            return new IVRenderer(device, iv, this.inputLayout);
-        });
+        // this.ivRenderers = ivs.map((iv) => {
+        //     return new IVRenderer(device, iv, this.inputLayout);
+        // });
     }
 
     public adjustCameraController(c: CameraController) {

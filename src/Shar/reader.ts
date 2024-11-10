@@ -1,7 +1,7 @@
 import { assert } from '../util.js'
 import { NamedArrayBufferSlice } from '../DataFetcher.js'
 
-import { Vector, Matrix } from './math.js'
+import { rmt } from './math.js'
 
 export class Reader {
     readonly name: string
@@ -16,7 +16,7 @@ export class Reader {
         this.length = slice.byteLength
     }
     public seek(offs: number) {
-        assert(this.offset + offs <= this.length)
+        assert(offs <= this.length)
         this.offset = offs
     }
     public seek_forward(offs: number) {
@@ -25,9 +25,9 @@ export class Reader {
     public get_offset(): number {
         return this.offset
     }
-    public f32(le: boolean = true) {
+    public f32(size: number = 4, le: boolean = true) {
         const value = this.view.getFloat32(this.offset, le)
-        this.seek_forward(4)
+        this.seek_forward(size)
         return value
     }
     public u32(size: number = 4, le: boolean = true) {
@@ -62,11 +62,11 @@ export class Reader {
     }
 }
 
-export function read_vector(view: Reader): Vector {
-    return new Vector(view.f32(), view.f32(), view.f32())
+export function read_vector(view: Reader): rmt.Vector {
+    return new rmt.Vector(view.f32(), view.f32(), view.f32())
 }
-export function read_matrix(view: Reader): Matrix {
-    return new Matrix(
+export function read_matrix(view: Reader): rmt.Matrix {
+    return new rmt.Matrix(
         view.f32(), view.f32(), view.f32(), view.f32(),
         view.f32(), view.f32(), view.f32(), view.f32(),
         view.f32(), view.f32(), view.f32(), view.f32(),
