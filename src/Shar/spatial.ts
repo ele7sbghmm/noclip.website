@@ -1,76 +1,95 @@
-import { BoxPts, FixedArray, NodeSwapArray, SwapArray, AAPlane3f, Bounds3f, tEntity } from './rad_util.js'
-import { IntersectDSG, FenceEntityDSG } from './dsg.js'
+import { assert } from '../util.js'
+import { FenceEntityDSG, IntersectDSG } from './dsg.js'
+import { AAPlane3f, Bounds3f, BoxPts, FixedArray, ISpatialProxyAA, NodeSwapArray, SwapArray, tEntity } from './rad_util.js'
 
+type float = number
 type int = number
 
-type StaticEntityDSG = any
-type StaticPhysDSG = any
-type DynaPhysDSG = any
-type AnimCollisionEntityDSG = any
-type AnimEntityDSG = any
-type TriggerVolume = any
-type RoadSegment = any
-type PathSegment = any
-
 export class SpatialNode {
-    public mSubDivPlane: AAPlane3f = { mAxis: 0, mPosn: 0 }
+    mSubDivPlane: AAPlane3f = { mAxis: 0, mPosn: 0 }
 
-    public mSEntityElems: NodeSwapArray<StaticEntityDSG> = new NodeSwapArray()
-    public mSPhysElems: SwapArray<StaticPhysDSG> = new SwapArray()
-    public mIntersectElems: SwapArray<IntersectDSG> = new SwapArray()
-    public mDPhysElems: NodeSwapArray<DynaPhysDSG> = new NodeSwapArray()
-    public mFenceElems: SwapArray<FenceEntityDSG> = new SwapArray()
-    public mAnimCollElems: NodeSwapArray<AnimCollisionEntityDSG> = new NodeSwapArray()
-    public mAnimElems: NodeSwapArray<AnimEntityDSG> = new NodeSwapArray()
-    public mTrigVolElems: SwapArray<TriggerVolume> = new SwapArray()
-    public mRoadSegmentElems: SwapArray<RoadSegment> = new NodeSwapArray()
-    public mPathSegmentElems: SwapArray<PathSegment> = new NodeSwapArray()
+    // mSEntityElems: NodeSwapArray<StaticEntityDSG>
+    //     = new NodeSwapArray(() => new StaticEntityDSG, 0)
+    // mSPhysElems: SwapArray<StaticPhysDSG>
+    //     = new SwapArray(() => new StaticPhysDSG, 0)
+    mIntersectElems: SwapArray<IntersectDSG>
+        = new SwapArray(() => new IntersectDSG, 0)
+    // mDPhysElems: NodeSwapArray<DynaPhysDSG>
+    //     = new NodeSwapArray(() => new DynaPhysDSG, 0)
+    mFenceElems: SwapArray<FenceEntityDSG>
+        = new SwapArray(() => new FenceEntityDSG, 0)
+    // mAnimCollElems: NodeSwapArray<AnimCollisionEntityDSG>
+    //     = new NodeSwapArray(() => new AnimCollisionEntityDSG, 0)
+    // mAnimElems: NodeSwapArray<AnimEntityDSG>
+    //     = new NodeSwapArray(() => new AnimEntityDSG, 0)
+    // mTrigVolElems: SwapArray<TriggerVolume>
+    //     = new SwapArray(() => new TriggerVolume, 0)
+    // mRoadSegmentElems: SwapArray<RoadSegment>
+    //     = new NodeSwapArray(() => new RoadSegment, 0)
+    // mPathSegmentElems: SwapArray<PathSegment>
+    //     = new NodeSwapArray(() => new PathSegment, 0)
 
-    public mBBox: BoxPts
+    mBBox: BoxPts
 
-    public IsRoot(): boolean { return true }
+    IsRoot(): boolean { return true }
 }
 export class SpatialTree extends tEntity {
-    public mTreeNodes: FixedArray<ContiguousBinNode<SpatialNode>> = new FixedArray()
-    public mTreeBounds: Bounds3f
+    mTreeNodes = new FixedArray(() => new ContiguousBinNode<SpatialNode>(this, 0, new SpatialNode()), 1)
+    mTreeBounds: Bounds3f
 
-    public SetTo(iNumNodes: number, iTreeBounds: Bounds3f) {
+    GetRoot(): ContiguousBinNode<SpatialNode> {
+        return this.mTreeNodes.mpData![0]
+    }
+    SetTo(iNumNodes: number, iTreeBounds: Bounds3f) {
         // this.mTreeNodes.Allocate(iNumNodes)
-        for (let i = 0; i < iNumNodes; i++) {
-            this.mTreeNodes.mpData[i] = new ContiguousBinNode(
-                new SpatialNode(),
-                this.mTreeNodes.mpData
-            )
-        }
         this.mTreeBounds = iTreeBounds
     }
-    public GetRoot(): ContiguousBinNode<SpatialNode> {
-        return this.mTreeNodes.mpData[0]
-    }
+    GetBounds() { return this.mTreeBounds }
 }
 
 export class ContiguousBinNode<T> {
-    // public mData: T
-    public mSubTreeSize: number = -1
-    public mParentOffset: number
+    // mData: T
+    mSubTreeSize: number
+    mParentOffset: number
+    _s: number
 
     // enum
     private msNoChildren = 0
     private msNoParent = 0
 
-    constructor(public mData: T) { }
-    public LinkParent(iParentOffset: number) { this.mParentOffset = iParentOffset }
-    public SetSubTreeSize(iSubTreeSize: number) { this.mSubTreeSize = iSubTreeSize }
-    public IsRoot() { return this.mParentOffset == this.msNoParent }
-    public GetSubTreeSize() { return this.mSubTreeSize }
-    public Parent() { return this.mParentOffset }
-    // public LChild() { } // : ContiguousBinNode { this + 1 }
-    // public LChilfOffset() { return 1 }
-    // public RChild() { } // : ContiguousBinNode { (this + 1).RSibling() }
-    // public RChilfOffset() { return this.LChild().RSiblingOffset() + 1 }
-    // public LSibling() { }
-    // public RSibling() { }
-    // public RSiblingOffset() { }
+    constructor(
+        public _parent_tree: SpatialTree,
+        public _i: number,
+        public mData: T
+    ) { }
+    LinkParent(iParentOffset: number) { this.mParentOffset = iParentOffset }
+    SetSubTreeSize(iSubTreeSize: number) { this.mSubTreeSize = iSubTreeSize }
+    IsRoot() { return this.mParentOffset == this.msNoParent }
+    GetSubTreeSize() { return this.mSubTreeSize }
+    Parent() { return this.mParentOffset }
+    LChild() { return this._lc() } // { return this + 1 }
+    LChildOffset() { return this._lco() } // { return 1 }
+    RChild() { return this._rc() } // { return (this + 1).RSibling() }
+    RChildOffset() { return this._rco() } // { return this.LChild().RSiblingOffset() + 1 }
+    LSibling() { return this._ls() }
+    RSibling() { return this._rs() }
+    RSiblingOffset() { this._rso() }
+
+    _gn(i: number) { return this._parent_tree.mTreeNodes.mpData![i] }
+    _pi() { return this._i + this.Parent() }
+    _p() { return this._gn(this._pi()) }
+    _lco() { return 1 }
+    _rco() { return this._lc()._rso() + 1 }
+    _lso() { return this.Parent() + 1 }
+    _rso() { return this.mSubTreeSize + 1 }
+    _lci() { return this._i + 1 }
+    _rci() { return this._i + this._rco() + 1 }
+    _lsi() { return this._i + this._pi() + 1 }
+    _rsi() { return this._i + this._rso() + 1 }
+    _lc() { return this._gn(this._lci()) }
+    _rc() { return this._gn(this._rci()) }
+    _ls() { return this._gn(this._lsi()) }
+    _rs() { return this._gn(this._rsi()) }
 }
 type tMark = int
 export class SpatialTreeIter {
@@ -83,7 +102,7 @@ export class SpatialTreeIter {
     mCurAlwaysVisNodes: SwapArray<SpatialNode>
 
     mpCurNodeList: SwapArray<SpatialNode>
-    mpRootNode: ContiguousBinNode<SpatialNode> | null
+    mpRootNode: ContiguousBinNode<SpatialNode>
     mpCurNode: ContiguousBinNode<SpatialNode>
 
     mCurNodeOffset: int
@@ -95,27 +114,88 @@ export class SpatialTreeIter {
 
     mBBox: BoxPts
 
-    constructor() { this.mpRootNode = null }
-    public rBBox() { return this.mBBox }
-    public rIthNode(iIth: int): SpatialNode { }
-    public MoveToNext(ibIncludeVis: boolean) {
-        this.mCurNodeI++;
+    _parent_tree: SpatialTree
+
+    constructor() { this.mpRootNode }
+    rBBox() { return this.mBBox }
+    MarkTree() { }
+    AndTree(iMark: tMark) {
+        if (iMark == 0) {
+            this.mCurAlwaysVisNodes.ClearUse()
+        }
+        for (let i = this.mNodeMarks.mSize - 1; i >= 0; i--) {
+            this.mNodeMarks.mpData![i] &= iMark
+        }
+    }
+    MoveToNext(ibIncludeVis: boolean) {
+        this.mCurNodeI++
         if (ibIncludeVis
             && (this.mCurNodeI >= this.mpCurNodeList.mUseSize)
             && (this.mpCurNodeList != this.mCurAlwaysVisNodes)
         ) {
-            this.mpCurNodeList = this.mCurAlwaysVisNodes;
-            this.mCurNodeI = 0;
+            this.mpCurNodeList = this.mCurAlwaysVisNodes
+            this.mCurNodeI = 0
         }
     }
-    public SetToRoot(irTree: SpatialTree) {
-        this.mpRootNode = irTree.GetRoot();
+    SetToRoot(irTree: SpatialTree) {
+        /**/ this._parent_tree = irTree
+        this.mpRootNode = irTree.GetRoot()
 
-        this.mBBox.SetTo(irTree.GetBounds());
+        this.mBBox.SetTo(irTree.GetBounds())
 
-        this.mNodeMarks.Allocate(this.mpRootNode.GetSubTreeSize() + 1);
-        this.mCurNodes.Allocate(this.mpRootNode.GetSubTreeSize() + 1);
-        this.mCurAlwaysVisNodes.Allocate(this.mpRootNode.GetSubTreeSize() + 1);
-        this.mpCurNodeList = this.mCurNodes;
+        this.mNodeMarks.Allocate(() => 0, this.mpRootNode.GetSubTreeSize() + 1)
+        this.mCurNodes.Allocate(() => new SpatialNode(), this.mpRootNode.GetSubTreeSize() + 1)
+        this.mCurAlwaysVisNodes.Allocate(() => new SpatialNode(), this.mpRootNode.GetSubTreeSize() + 1)
+        this.mpCurNodeList = this.mCurNodes
+    }
+    rIthNode(iIth: int): SpatialNode {
+        // return (mpRootNode+iIth)->mData
+        return this._parent_tree.mTreeNodes.mpData![iIth].mData
+    }
+    NumNodes(): int {
+        // return (mpRootNode->GetSubTreeSize()+1)
+        return this.mpRootNode?.GetSubTreeSize() + 1
+    }
+    BuildBBoxes(iBoxPts: BoxPts, iCurNodeOffset: int = 0) {
+        // const pCurNode: ContiguousBinNode<SpatialNode> = (mpRootNode + iCurNodeOffset)
+        const pCurNode: ContiguousBinNode<SpatialNode>
+            = this._parent_tree.mTreeNodes.mpData![iCurNodeOffset]
+
+        pCurNode.mData.mBBox = iBoxPts
+
+        if (pCurNode.GetSubTreeSize() > 0) {
+            iBoxPts.CutOffGT(pCurNode.mData.mSubDivPlane)
+            this.BuildBBoxes(iBoxPts, iCurNodeOffset + pCurNode.LChildOffset())
+
+            iBoxPts = pCurNode.mData.mBBox
+            iBoxPts.CutOffLT(pCurNode.mData.mSubDivPlane)
+            this.BuildBBoxes(iBoxPts, iCurNodeOffset + pCurNode.RChildOffset())
+        }
+    }
+    rSeekNode(irVolume: ISpatialProxyAA, iCurNodeOffset: int = 0): SpatialNode {
+        // const pCurNode: ContiguousBinNode<SpatialNode> = (mpRootNode + iCurNodeOffset)
+        const pCurNode: ContiguousBinNode<SpatialNode>
+            = this._parent_tree.mTreeNodes.mpData![iCurNodeOffset]
+
+        if (pCurNode.GetSubTreeSize() > 0) {
+            const PlaneVolResult: float = irVolume.CompareTo__AAPlane3f(pCurNode.mData.mSubDivPlane)
+
+            if (PlaneVolResult > 0.0) {
+                // The Plane is greater than TVolume in Posn, so
+                // TVolume is in the LT Partitiion..
+                return this.rSeekNode(irVolume, iCurNodeOffset + pCurNode.LChildOffset())
+            } else {
+                if (PlaneVolResult < 0.0) {
+                    // The Plane is less han TVolume in Posn, so
+                    // TVolume is in the GT Partitiion..
+                    return this.rSeekNode(irVolume, iCurNodeOffset + pCurNode.RChildOffset())
+                } else {
+                    //  PlaneVolResult == 0
+                    return (pCurNode.mData)
+                }
+            }
+        } else {
+            return (pCurNode.mData)
+        }
     }
 }

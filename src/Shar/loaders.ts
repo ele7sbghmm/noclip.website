@@ -1,14 +1,19 @@
 import { assert } from '../util.js'
 
+import { rmt } from './math.js'
 import { read_vector } from './reader.js'
 import { tChunkFile } from './file.js'
-import { ContiguousBinNode, SpatialTree, SpatialNode } from './spatial.js'
-import { Bounds3f, tEntity } from './rad_util.js'
+import { SpatialTree } from './spatial.js'
+import { BoxPts, Bounds3f, tEntity } from './rad_util.js'
 import { FenceEntityDSG, IntersectDSG } from './dsg.js'
+import { RenderManager } from './renderer.js'
 
 import { SRR2 } from './srrchunks.js'
+import { Pure3D } from './chunkids.js'
 
 const NULL = null
+type float = number
+type long = number
 type int = number
 type unsigned = number
 type const_char_p = string
@@ -17,7 +22,6 @@ enum tLoadStatus { LOAD_OK, LOAD_ERROR }
 abstract class tSimpleChunkHandler {
     _id: unsigned
     m_NameOverride: const_char_p
-
     constructor(id: unsigned) {
         this._id = id
         this.m_NameOverride = ``
@@ -29,92 +33,107 @@ abstract class tSimpleChunkHandler {
         this.LoadObject(file)
     }
 }
-interface IWrappedLoader { }
+interface ChunkListenerCallback {
+    OnChunkLoaded(ipEntity: tEntity, iUserData: int, ipChunkID: unsigned): void
+}
+interface IWrappedLoader {
+    mpListenerCB: ChunkListenerCallback
+    mUserData: int
+    // SetRegdListener(pListenerCB: ChunkListenerCallback, iUserData: int): void {
+    //     // if (this.mpListenerCB != NULL) this.mpListenerCB.OnChunkLoaded(NULL, iUserData, 0)
+    //     this.mpListenerCB = pListenerCB
+    //     this.mUserData = iUserData
+    // }
+    // ModRegdListener(pListenerCB: ChunkListenerCallback, iUserData: int): void {
+    //     assert(pListenerCB == this.mpListenerCB)
+    //     this.mUserData = iUserData
+    // }
+}
 export class AllWrappers {
-    static mspInstance: AllWrappers | null = NULL
-    mpLoaders: (IWrappedLoader | null)[]// msNumWrappers
+    static mspInstance: AllWrappers
+    mpLoaders: IWrappedLoader[]// msNumWrappers
 
     constructor() {
-        for (let i = AllWrappers.Enum.msNumWrappers - 1; i > - 1; i--) {
+        for (let i = AllWrappers._enum.msNumWrappers - 1; i > - 1; i--) {
             this.mpLoaders[i] = NULL
         }
         this.CoupleAllLoaders()
     }
-    public static CreateInstance(): AllWrappers {
-        assert(AllWrappers.mspInstance == NULL)
+    static CreateInstance(): AllWrappers {
+        // assert(AllWrappers.mspInstance == NULL)
         AllWrappers.mspInstance = new AllWrappers()
         return AllWrappers.mspInstance
     }
-    public static GetInstance(): AllWrappers {
-        assert(this.mspInstance != NULL)
+    static GetInstance(): AllWrappers {
+        // assert(this.mspInstance != NULL)
         return this.mspInstance
     }
-    public CoupleAllLoaders() {
-        for (let i: int = AllWrappers.Enum.msNumWrappers - 1; i > -1; i--) {
-            assert(this.mpLoaders[i] == NULL)
-
+    CoupleAllLoaders() {
+        for (let i: int = AllWrappers._enum.msNumWrappers - 1; i > -1; i--) {
+            // assert(this.mpLoaders[i] == NULL)
             switch (i) {
-                // case AllWrappers.Enum.msGeometry:
+                // case AllWrappers._enum.msGeometry:
                 //     this.mpLoaders[i] = new GeometryWrappedLoader()
                 //     break
-                // case AllWrappers.Enum.msStaticPhys:
+                // case AllWrappers._enum.msStaticPhys:
                 //     this.mpLoaders[i] = new StaticPhysLoader()
                 //     break
-                // case AllWrappers.Enum.msStaticEntity:
+                // case AllWrappers._enum.msStaticEntity:
                 //     this.mpLoaders[i] = new StaticEntityLoader()
                 //     break
-                case AllWrappers.Enum.msTreeDSG:
-                    this.mpLoaders[i] = new TreeDSGLoader()
+                case AllWrappers._enum.msTreeDSG:
+                    // this.mpLoaders[i] = new TreeDSGLoader()
+                    this.mpLoaders.push(new TreeDSGLoader())
                     break
-                case AllWrappers.Enum.msFenceEntity:
+                case AllWrappers._enum.msFenceEntity:
                     this.mpLoaders[i] = new FenceLoader()
                     break
-                case AllWrappers.Enum.msIntersectDSG:
+                case AllWrappers._enum.msIntersectDSG:
                     this.mpLoaders[i] = new IntersectLoader()
                     break
-                // case AllWrappers.Enum.msAnimCollEntity:
+                // case AllWrappers._enum.msAnimCollEntity:
                 //     this.mpLoaders[i] = new AnimCollLoader()
                 //     break
-                // case AllWrappers.Enum.msDynaPhys:
+                // case AllWrappers._enum.msDynaPhys:
                 //     this.mpLoaders[i] = new DynaPhysLoader()
                 //     break
-                // case AllWrappers.Enum.msInstStatEntity:
+                // case AllWrappers._enum.msInstStatEntity:
                 //     this.mpLoaders[i] = new InstStatEntityLoader()
                 //     break
-                // case AllWrappers.Enum.msInstStatPhys:
+                // case AllWrappers._enum.msInstStatPhys:
                 //     this.mpLoaders[i] = new InstStatPhysLoader()
                 //     break
-                // case AllWrappers.Enum.msLocator:
+                // case AllWrappers._enum.msLocator:
                 //     this.mpLoaders[i] = new LocatorLoader()
                 //     break
-                // case AllWrappers.Enum.msWorldSphere:
+                // case AllWrappers._enum.msWorldSphere:
                 //     this.mpLoaders[i] = new WorldSphereLoader()
                 //     break
-                // case AllWrappers.Enum.msRoadSegment:
+                // case AllWrappers._enum.msRoadSegment:
                 //     this.mpLoaders[i] = new RoadLoader()
                 //     break
-                // case AllWrappers.Enum.msPathSegment:
+                // case AllWrappers._enum.msPathSegment:
                 //     this.mpLoaders[i] = new PathLoader()
                 //     break
-                // case AllWrappers.Enum.msBillboard:
+                // case AllWrappers._enum.msBillboard:
                 //     this.mpLoaders[i] = new BillboardWrappedLoader()
                 //     break
-                // case AllWrappers.Enum.msInstParticleSystem:
+                // case AllWrappers._enum.msInstParticleSystem:
                 //     this.mpLoaders[i] = new InstParticleSystemLoader()
                 //     break
-                // case AllWrappers.Enum.msBreakableObject:
+                // case AllWrappers._enum.msBreakableObject:
                 //     this.mpLoaders[i] = new BreakableObjectLoader()
                 //     break
-                // case AllWrappers.Enum.msAnimEntity:
+                // case AllWrappers._enum.msAnimEntity:
                 //     this.mpLoaders[i] = new AnimDSGLoader()
                 //     break
-                // case AllWrappers.Enum.msLensFlare:
+                // case AllWrappers._enum.msLensFlare:
                 //     this.mpLoaders[i] = new LensFlareLoader()
                 //     break
-                // case AllWrappers.Enum.msAnimDynaPhys:
+                // case AllWrappers._enum.msAnimDynaPhys:
                 //     this.mpLoaders[i] = new AnimDynaPhysLoader()
                 //     break
-                // case AllWrappers.Enum.msAnimDynaPhysWrapper:
+                // case AllWrappers._enum.msAnimDynaPhysWrapper:
                 //     this.mpLoaders[i] = new AnimDynaPhysWrapperLoader()
                 // break
                 default: break
@@ -123,7 +142,7 @@ export class AllWrappers {
     }
 }
 export namespace AllWrappers {
-    export enum Enum {
+    export enum _enum {
         // msGeometry,
         // msStaticEntity,
         // msStaticPhys,
@@ -148,26 +167,20 @@ export namespace AllWrappers {
         msNumWrappers
     }
 }
-export class TreeDSGLoader extends tSimpleChunkHandler {
-    public id: number
-
-    constructor() {
-        super(SRR2.ChunkID.TREE_DSG)
-    }
-    public LoadObject(f: tChunkFile) {
-
+export class TreeDSGLoader extends tSimpleChunkHandler implements IWrappedLoader {
+    constructor() { super(SRR2.ChunkID.TREE_DSG) }
+    LoadObject(f: tChunkFile) {
         const nNodes = f.GetLong()
-        const bounds: Bounds3f = {
-            mMin: read_vector(f.realFile),
-            mMax: read_vector(f.realFile)
-        }
+        const bounds: Bounds3f = new Bounds3f()
+        bounds.mMin = read_vector(f.realFile)
+        bounds.mMax = read_vector(f.realFile)
 
         const pSpatialTree = new SpatialTree()
         pSpatialTree.SetTo(nNodes, bounds)
 
-        let pCurNode: ContiguousBinNode<SpatialNode> = pSpatialTree.GetRoot()
+        // let pCurNode: ContiguousBinNode<SpatialNode> = pSpatialTree.GetRoot()
         for (let i = 0; f.ChunksRemaining(); i++) {
-            pCurNode = pSpatialTree.mTreeNodes.mpData[i]
+            let pCurNode = pSpatialTree.mTreeNodes.mpData[i]
 
             f.BeginChunk()
 
@@ -204,7 +217,6 @@ export class TreeDSGLoader extends tSimpleChunkHandler {
             }
             f.EndChunk()
         }
-
         //mpListenerCB.OnChunkLoaded(pSpatialTree, mUserData, _id)
         console.log(pSpatialTree)
         return NULL
@@ -223,9 +235,14 @@ class FenceLoader extends tSimpleChunkHandler implements IWrappedLoader {
                     pFenceDSG.mEndPoint = read_vector(f.realFile)
                     pFenceDSG.mNormal = read_vector(f.realFile)
 
-                    // BoxPts WorldBBox = GetRenderManager()->pWorldScene()->mStaticTreeWalker.rIthNode(0).mBBox
-                    // pFenceDSG.mStartPoint.y = WorldBBox.mBounds.mMin.y
-                    // pFenceDSG.mEndPoint.y = WorldBBox.mBounds.mMax.y
+                    const WorldBBox: BoxPts = RenderManager
+                        .GetRenderManager()
+                        .pWorldScene()
+                        .mStaticTreeWalker
+                        .rIthNode(0)
+                        .mBBox
+                    pFenceDSG.mStartPoint.y = WorldBBox.mBounds.mMin.y
+                    pFenceDSG.mEndPoint.y = WorldBBox.mBounds.mMax.y
 
                     break
                 }
@@ -237,14 +254,77 @@ class FenceLoader extends tSimpleChunkHandler implements IWrappedLoader {
         } // while
 
         // mpListenerCB->OnChunkLoaded( pFenceDSG, mUserData, _id )
-
         pFenceDSG.SetName(`FenceDSG${mFenceCount++}`)
-
-
         return pFenceDSG
     }
 }
 class IntersectLoader extends tSimpleChunkHandler implements IWrappedLoader {
     constructor() { super(SRR2.ChunkID.INTERSECT_DSG) }
-    LoadObject(f: tChunkFile): iEntity { }
+    LoadObject(f: tChunkFile): tEntity {
+        const pIDSG: IntersectDSG = new IntersectDSG()
+
+        pIDSG.mTriIndices.Allocate(() => 0, f.GetLong());
+        pIDSG.mTriIndices.AddUse(pIDSG.mTriIndices.mSize);
+
+        for (let i = 0; i < pIDSG.mTriIndices.mSize; i++) {
+            pIDSG.mTriIndices.mpData[i] = f.GetLong()
+        }
+
+        pIDSG.mTriPts.Allocate(() => new rmt.Vector(0, 0, 0), f.GetLong())
+        pIDSG.mTriPts.AddUse(pIDSG.mTriPts.mSize)
+
+        for (let i = 0; i < pIDSG.mTriPts.mSize; i++) {
+            pIDSG.mTriPts.mpData[i] = read_vector(f.realFile)
+        }
+
+        pIDSG.mTriNorms.Allocate(() => new rmt.Vector(0, 0, 0), f.GetLong())
+        pIDSG.mTriNorms.AddUse(pIDSG.mTriNorms.mSize)
+
+        for (let i = 0; i < pIDSG.mTriNorms.mSize; i++) {
+            pIDSG.mTriNorms.mpData[i] = read_vector(f.realFile)
+        }
+
+        for (let i = 0; f.ChunksRemaining(); i++) {
+            f.BeginChunk()
+            switch (f.GetCurrentID()) {
+                case Pure3D.Mesh.BOX: {
+                    const minx: float = f.GetFloat()
+                    const miny: float = f.GetFloat()
+                    const minz: float = f.GetFloat()
+                    const maxx: float = f.GetFloat()
+                    const maxy: float = f.GetFloat()
+                    const maxz: float = f.GetFloat()
+
+                    pIDSG.SetBoundingBox(minx, miny, minz, maxx, maxy, maxz);
+                    break
+                }
+
+                case Pure3D.Mesh.SPHERE: {
+                    const cx: float = f.GetFloat()
+                    const cy: float = f.GetFloat()
+                    const cz: float = f.GetFloat()
+                    const r: float = f.GetFloat()
+
+                    pIDSG.SetBoundingSphere(cx, cy, cz, r)
+                    break
+                }
+
+                case SRR2.ChunkID.TERRAIN_TYPE: {
+                    const version: long = f.GetLong()
+                    assert(version == 0)
+                    const size: long = f.GetLong()
+                    pIDSG.mTerrainType.Allocate(() => 0, size)
+                    pIDSG.mTerrainType.AddUse(size)
+                    pIDSG.mTerrainType[0] = f.realFile.u8()
+
+                    break
+                }
+
+                default: break
+            } // switch
+            f.EndChunk()
+        }
+        this.mpListenerCB.OnChunkLoaded(pIDSG, this.mUserData, this._id)
+        return /*NULL;//*/pIDSG;
+    }
 }
