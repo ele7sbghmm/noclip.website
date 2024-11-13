@@ -48,7 +48,8 @@ export class tChunkFile {
 
         // advance to the start of the subchunks
         if (this.stackTop != 0) {
-            assert(this.chunkStack[this.stackTop - 1].dataLength < this.chunkStack[this.stackTop - 1].chunkLength);
+            assert(this.chunkStack[this.stackTop - 1].dataLength
+                < this.chunkStack[this.stackTop - 1].chunkLength);
 
             let start: number = this.chunkStack[this.stackTop - 1].startPosition
                 + this.chunkStack[this.stackTop - 1].dataLength;
@@ -89,5 +90,3 @@ export class tChunkFile {
     public GetUChar(): number { return this.realFile.u8() }
     public GetChar(): number { return this.realFile.i8() }
 }
-
-export class tSimpleChunkHandler { }

@@ -4,30 +4,13 @@ import { rmt } from './math.js'
 import { SRR2 } from './srrchunks.js'
 import { tEntity, SwapArray, NodeSwapArray, tUID, BoxPts, ISpatialProxyAA } from './rad_util.js'
 import { SpatialTreeIter, SpatialTree, SpatialNode } from './spatial.js'
-import { FenceEntityDSG, IntersectDSG } from './dsg.js'
+import { DynaLoadListDSG, FenceEntityDSG, IntersectDSG, tDrawable, WorldSphereDSG } from './dsg.js'
 import { AllWrappers } from './loaders.js'
 
 const NULL = null
 type int = number
 type bool = boolean
 
-export namespace RenderEnums {
-    export enum GutsCallEnum {
-        IntersectGuts = 0x03000000,
-        TreeDSGGuts = 0x06000000,
-        FenceGuts = 0x07000000,
-        GutsOnlyMask = 0xFF000000,
-    }
-    export enum LayerEnum {
-        GUI = 0x00000000,
-        PresentationSlot,
-        LevelSlot,
-        MissionSlot1,
-        MissionSlot2,
-        numLayers,
-        LayerOnlyMask = 0x000000FF
-    }
-}
 enum DynaLoadState {
     msPreLoads,
     msNoLoad,
@@ -35,7 +18,13 @@ enum DynaLoadState {
     msIgnoreLoad
 }
 
-abstract class RenderLayer {
+abstract class RenderLayer {   //Static Data
+    // enum {
+        msMaxGuts = 10
+    // };
+    
+    mpGuts: SwapArray<tDrawable>
+ 
     // abstract AddGuts__tDrawable(ipDrawable: tDrawable): void
     // abstract AddGuts__tGeometry(ipGeometry: tGeometry): void
     abstract AddGuts__IntersectDSG(ipIntersectDSG: IntersectDSG): void
@@ -51,6 +40,7 @@ abstract class RenderLayer {
     // abstract AddGuts__WorldSphereDSG(ipWorldSphere: WorldSphereDSG): void
     // abstract AddGuts__RoadSegment(ipRoadSegment: RoadSegment): void
     // abstract AddGuts__PathSegment(ipPathSegment: PathSegment): void
+    SetUpGuts() { this.mpGuts.Allocate(() => new tDrawable, this.msMaxGuts) }
 }
 class WorldRenderLayer extends RenderLayer {
     mpWorldScene: WorldScene
@@ -67,6 +57,13 @@ class WorldRenderLayer extends RenderLayer {
     mMirror: bool
     mMirrorMatrix: rmt.Matrix
     mWorldShperes: any
+
+    // enum DynaLoadState {
+    msPreLoads = 0
+    msNoLoad = 1
+    msLoad = 2
+    msIgnoreLoad = 3
+    // }
 
     ActivateWS(iUID: tUID) {
         for (let i = this.mWorldSpheres.mUseSize; i > -1; i--) {
@@ -97,16 +94,55 @@ class WorldRenderLayer extends RenderLayer {
     // AddGuts__AnimEntityDSG(ipAnimDSG: AnimEntityDSG) { }
     // AddGuts__DynaPhysDSG(ipDynaPhysDSG: DynaPhysDSG) { }
     // AddGuts__TriggerVolume(ipTriggerVolume: TriggerVolume) { }
-    // AddGuts__WorldSphereDSG(ipWorldSphere: WorldSphereDSG) { }
+    AddGuts__WorldSphereDSG(ipWorldSphereDSG: WorldSphereDSG) {
+        this.mWorldSpheres.Add(ipWorldSphereDSG)
+        // if(mDynaLoadState == msLoad) {
+        //    mLoadLists[mCurLoadIndex]->mWorldSphereElems.Add(ipWorldSphereDSG)
+        // }
+    }
     // AddGuts__RoadSegment(ipRoadSegment: RoadSegment) { }
     // AddGuts__PathSegment(ipPathSegment: PathSegment) { }
-}
+    override SetUpGuts() {
+        super.SetUpGuts()
 
+        this.mpWorldScene = new WorldScene
+        // this.mpWorldScene.Init(msMaxGuts)
+
+        this.mStaticLoadLists.Allocate(() => new DynaLoadListDSG, 7)
+        this.mLoadLists.Allocate(() => new DynaLoadListDSG, 7)
+
+        this.mLoadLists.AddUse(7)
+        this.mStaticLoadLists.AddUse(7)
+
+        this.mWorldSpheres.Allocate(() => new WorldSphereDSG, 10)
+
+        this.mDynaLoadState = this.msPreLoads
+        this.mnLoadListRefs = 2000
+        this.mCurLoadIndex = -1
+
+        for (let i = 0; i < 7; i++) {
+            this.mStaticLoadLists.mpData![i].AllocateAll(this.mnLoadListRefs)
+            this.mLoadLists.mpData![i] = this.mStaticLoadLists.mpData![i]
+        }
+
+        this.mLoadLists.ClearUse()
+
+    }
+    DoPreStaticLoad() {
+        // if (!IsGutsSetup())
+        this.SetUpGuts()
+        // mExportedState = msFrozen
+    }
+}
+export function GetRenderManager() { return RenderManager.GetInstance() }
 export class RenderManager {
     static mspInstance: RenderManager
-    mpRenderLayers: WorldRenderLayer[]// [RenderEnums.numLayers]
-    mCurWorldLayer: any
+    mpRenderLayers: WorldRenderLayer[]//[RenderEnums.numLayers]
+    mCurWorldLayer: int
 
+    constructor() {
+        this.InitLayers()
+    }
     static CreateInstance() {
         RenderManager.mspInstance = new RenderManager()
     }
@@ -153,6 +189,49 @@ export class RenderManager {
                 }
                 break
             }
+        }
+    }
+    RedirectChunks(ChunkDestinationMask: int) {
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msStaticEntity)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.StaticEntityGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msStaticPhys)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.StaticPhysGuts)
+        AllWrappers.GetInstance().mLoader(AllWrappers._enum.msTreeDSG)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.TreeDSGGuts)
+        AllWrappers.GetInstance().mLoader(AllWrappers._enum.msFenceEntity)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.FenceGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msGeometry)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.IgnoreGuts)
+        AllWrappers.GetInstance().mLoader(AllWrappers._enum.msIntersectDSG)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.IntersectGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msAnimCollEntity)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.AnimCollGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msAnimEntity).!ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.AnimGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msDynaPhys)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.DynaPhysGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msInstStatPhys)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.StaticPhysGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msInstStatEntity)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.StaticEntityGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msLocator)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.LocatorGuts)
+        AllWrappers.GetInstance().mLoader(AllWrappers._enum.msWorldSphere)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.WorldSphereGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msRoadSegment)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.RoadSegmentGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msPathSegment)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.PathSegmentGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msBillboard)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.StaticEntityGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msLensFlare)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.StaticEntityGuts)
+        // AllWrappers.GetInstance().mLoader(AllWrappers._enum.msAnimDynaPhys)!.ModRegdListener(this, ChunkDestinationMask | RenderEnums.GutsCallEnum.DynaPhysGuts)
+    }
+    InitLayers() {
+        for (let i: int = RenderEnums.LayerEnum.numLayers - 1; i > -1; i--) {
+            switch (i) {
+                case RenderEnums.LayerEnum.LevelSlot:
+                    this.mpRenderLayers[i] = new WorldRenderLayer
+                    break
+                // case RenderEnums.LayerEnum.GUI:
+                //     this.mpRenderLayers[i] = new FrontEndRenderLayer
+                //     this.mpRenderLayers[i].DoAllSetups()
+                //     break;
+                // case RenderEnums.LayerEnum.PresentationSlot:
+                //     this.mpRenderLayers[i] = new RenderLayer
+                //     this.mpRenderLayers[i].SetBeginView(false)
+                //     this.mpRenderLayers[i].DoAllSetups()
+                //     break
+                // default:
+                //     this.mpRenderLayers[i] = new RenderLayer
+                //     this.mpRenderLayers[i].DoAllSetups()
+                //     break
+            }
+            // this.mpRenderLayers[i].SetUpViewCam()
         }
     }
 }
@@ -211,7 +290,7 @@ export class WorldScene {
         DrawableSP.mBounds.mMin.Add(this.mEpsilonOffset)
         DrawableSP.mBounds.mMax.Sub(this.mEpsilonOffset)
 
-       const pSpatialNode: SpatialNode = this.mStaticTreeWalker.rSeekNode(DrawableSP as ISpatialProxyAA)
+        const pSpatialNode: SpatialNode = this.mStaticTreeWalker.rSeekNode(DrawableSP as ISpatialProxyAA)
         pSpatialNode.mIntersectElems.Add(ipIntersectDSG)
         ipIntersectDSG.mpSpatialNode = pSpatialNode
     }
@@ -439,5 +518,96 @@ export class RenderFlow {
     static GetInstance(): RenderFlow {
         assert(RenderFlow.spInstance != NULL)
         return RenderFlow.spInstance
+    }
+}
+namespace RenderEnums {
+    export enum LayerEnum {
+        GUI = 0x00000000,
+        PresentationSlot,
+        LevelSlot,
+        MissionSlot1,
+        MissionSlot2,
+        numLayers,
+        LayerOnlyMask = 0x000000FF
+    }
+    export enum UserDataEnum {
+        BogusUserData = 0x00000000,
+        AllRenderLoadingComplete = 0x00100000,
+        AllIntersectLoadingComplete = 0x00200000,
+        DynamicLoadComplete = 0x00400000,
+        CompletionOnlyMask = 0x00F00000
+    }
+    export enum LoadZoneEnum {
+        Zone1 = 0x00001000,
+        ZoneMask = 0x000FF000,
+        ZoneShift = 12
+    }
+    //GutsCallEnum is meant to mask to the top byte of a CB whose 
+    //bottom byte is LayerEnum
+    export enum GutsCallEnum {
+        DrawableGuts = 0x01000000,
+        GeometryGuts = 0x02000000,
+        IntersectGuts = 0x03000000,
+        StaticEntityGuts = 0x04000000,
+        StaticPhysGuts = 0x05000000,
+        TreeDSGGuts = 0x06000000,
+        FenceGuts = 0x07000000,
+        AnimCollGuts = 0x08000000,
+        DynaPhysGuts = 0x09000000,
+        LocatorGuts = 0x0A000000,
+        WorldSphereGuts = 0x0B000000,
+        RoadSegmentGuts = 0x0C000000,
+        PathSegmentGuts = 0x0D000000,
+        GlobalWSphereGuts = 0x0E000000,
+        AnimGuts = 0x0F000000,
+        IgnoreGuts = 0xFE000000,
+        GutsOnlyMask = 0xFF000000
+    }
+    export enum LevelEnum {
+        L1,
+        L2,
+        L3,
+        L4,
+        L5,
+        L6,
+        L7,
+        //L8,
+        //L9,
+        //MULTI,
+        numLevels,
+        //Mini games
+        B00 = numLevels,
+        B01,
+        B02,
+        B03,
+        B04,
+        B05,
+        B06,
+        B07,
+        MAX_LEVEL
+    }
+    export enum LevelMissionCountEnum {
+        L1MCount = 10,
+        L2MCount = 10,
+        L3MCount = 10,
+        L4MCount = 10,
+        L5MCount = 10,
+        L6MCount = 10,
+        L7MCount = 10,
+        L8MCount = 10,
+        L9MCount = 10
+    }
+    export enum MissionEnum {
+        M1,
+        M2,
+        M3,
+        M4,
+        M5,
+        M6,
+        M7,
+        M8,
+        M9,
+        M10,
+        numMissions
     }
 }

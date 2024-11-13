@@ -3,13 +3,13 @@ import { SwapArray, ReserveArray, tName, tEntity, Bounds3f } from './rad_util.js
 import { SpatialNode } from './spatial.js'
 
 type bool = boolean
+type float = number
 type int = number
 type unsigned_char = number
 type unsigned_char_p = number
 type int_p = number
 
 export class tDrawable extends tEntity {
-
     static dummyBox: rmt.Box3D
     static dummySphere: rmt.Sphere
 
@@ -32,7 +32,9 @@ export class tDrawable extends tEntity {
         sphere = tDrawable.dummySphere
     }
 }
-export class IEntityDSG extends tDrawable { }
+export class IEntityDSG extends tDrawable {
+    mpSpatialNode: SpatialNode
+}
 export class CollisionEntityDSG extends IEntityDSG { }
 export class StaticEntityDSG { }
 export class StaticPhysDSG { }
@@ -53,10 +55,26 @@ export class IntersectDSG extends IEntityDSG {
     mBox3D: rmt.Box3D
     mSphere: rmt.Sphere
     mPosn: rmt.Vector
-    mpSpatialNode: SpatialNode
 
     override GetBoundingBox(box: rmt.Box3D): rmt.Box3D { return this.mBox3D }
     override GetBoundingSphere(sphere: rmt.Sphere): rmt.Sphere { return this.mSphere }
+    SetBoundingBox(
+        x1: float, y1: float, z1: float,
+        x2: float, y2: float, z2: float
+    ) {
+        this.mBox3D.low.Set(x1, y1, z1);
+        this.mBox3D.high.Set(x2, y2, z2);
+
+        this.mPosn = rmt.Vector.Sub(this.mBox3D.high, this.mBox3D.low)
+        this.mPosn.Scale(0.5)
+        this.mPosn.Add(this.mBox3D.low)
+    }
+    SetBoundingSphere(x: float, y: float, z: float, radius: float) {
+        this.mSphere.centre.Set(x, y, z);
+        this.mSphere.radius = radius;
+
+        this.mPosn.Set(x, y, z);
+    }
 }
 export namespace IntersectDSG {
     export enum _enum {
@@ -74,8 +92,6 @@ export class FenceEntityDSG extends CollisionEntityDSG {
     mStartPoint: rmt.Vector
     mEndPoint: rmt.Vector
     mNormal: rmt.Vector
-    // mpSpatialNode: SpatialNode
-
     override GetBoundingBox(/*box: rmt.Box3D*/): rmt.Box3D {
         const bounds = new Bounds3f
         bounds.mMin.SetTo(this.mStartPoint)
@@ -83,8 +99,8 @@ export class FenceEntityDSG extends CollisionEntityDSG {
         bounds.Accumulate__Vector(this.mEndPoint)
 
         const box = new rmt.Box3D
-        box.low = (bounds.mMin)
-        box.high = (bounds.mMax)
+        box.low = bounds.mMin
+        box.high = bounds.mMax
         return box
     }
     override GetBoundingSphere(/*sphere: rmt.Sphere*/): rmt.Sphere {
@@ -120,6 +136,20 @@ export class DynaLoadListDSG {
     mTrigVolElems: SwapArray<TriggerVolume>
     mRoadSegmentElems: SwapArray<RoadSegment>
     mPathSegmentElems: SwapArray<PathSegment>
+
+    AllocateAll(inSize: int) {
+        this.mWorldSphereElems.Allocate(() => new WorldSphereDSG, 2);
+        this.mSEntityElems.Allocate(() => new StaticEntityDSG, inSize);
+        this.mSPhysElems.Allocate(() => new StaticPhysDSG, inSize / 2);
+        this.mIntersectElems.Allocate(() => new IntersectDSG, inSize / 4);
+        this.mDPhysElems.Allocate(() => new DynaPhysDSG, inSize);
+        this.mFenceElems.Allocate(() => new FenceEntityDSG, inSize);
+        this.mAnimCollElems.Allocate(() => new AnimCollisionEntityDSG, inSize / 4);
+        this.mAnimElems.Allocate(() => new AnimEntityDSG, inSize / 4);
+        this.mTrigVolElems.Allocate(() => new TriggerVolume, inSize / 4);
+        this.mRoadSegmentElems.Allocate(() => new RoadSegment, 1250);
+        this.mPathSegmentElems.Allocate(() => new PathSegment, inSize);
+    }
 }
 export class WorldSphereDSG extends IEntityDSG {
     mbActive: bool
