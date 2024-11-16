@@ -41,9 +41,10 @@ export class SpatialTree extends tEntity {
         return this.mTreeNodes.mpData![0]
     }
     SetTo(iNumNodes: number, iTreeBounds: Bounds3f) {
-        for (let i = 0; i < iNumNodes; i++) {
-            new ContiguousBinNode<SpatialNode>(this, i, new SpatialNode)
-        }
+        this.mTreeNodes = new FixedArray(
+            () => new ContiguousBinNode<SpatialNode>(this, 0, new SpatialNode),
+            iNumNodes
+        )
         // this.mTreeNodes.Allocate(
         //     () => new ContiguousBinNode<SpatialNode>(this, 0, new SpatialNode),
         //     iNumNodes

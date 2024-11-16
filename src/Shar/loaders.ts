@@ -22,20 +22,22 @@ type const_char_p = string
 type char = string
 type radLoadClassID = unsigned_int
 
-const radLoad = radLoadInstance()
-function radLoadInstance() { return ILoadManager.s_instance }
-function radLoadInitialize(/*init: radLoadInit*/) {
+export function radLoadInitialize() {
     // if (!init) { init = new radLoadInit() }
-    ILoadManager.s_instance = new radLoadManager(/*init*/)
+    ILoadManager.s_instance = new radLoadManager
 }
+class radLoadOptions { }
+function radLoadInstance() { return ILoadManager.s_instance }
 abstract class ILoadManager {
     static s_instance: ILoadManager
+    abstract Load(options: radLoadOptions, request: radLoadRequest): void
     abstract AddDataLoader(dataLoader: radLoadDataLoader, id: radLoadClassID): void
-    // abstract AddFileLoader(fileLoader: radLoadFileLoader, extension: const_char_p): void
+    abstract AddFileLoader(fileLoader: radLoadFileLoader, extension: const_char_p): void
     abstract GetDataLoader(id: radLoadClassID): radLoadDataLoader
-    // abstract GetFileLoader(extension: const_char_p): radLoadFileLoader
+    abstract GetFileLoader(extension: const_char_p): radLoadFileLoader
 }
-enum tLoadStatus { LOAD_OK, LOAD_ERROR }
+export const radLoad = ILoadManager.s_instance
+export enum tLoadStatus { LOAD_OK, LOAD_ERROR }
 abstract class tChunkHandler extends radLoadDataLoader {
     abstract Load(file: tChunkFile): void
     abstract GetChunkID(): unsigned_int
@@ -57,8 +59,8 @@ abstract class tSimpleChunkHandler extends tChunkHandler {
     GetChunkID(): unsigned { return this._id }
 
     //interface IWrappedLoader {
-    mpListenerCB: ChunkListenerCallback
-    mUserData: int
+    mpListenerCB: ChunkListenerCallback = RenderManager.GetRenderManager()
+    mUserData: int = 0
     SetRegdListener(pListenerCB: ChunkListenerCallback, iUserData: int): void {
         //if (this.mpListenerCB != NULL) this.mpListenerCB.OnChunkLoaded(NULL, iUserData, 0)
         // this.mpListenerCB = pListenerCB
@@ -72,20 +74,39 @@ abstract class tSimpleChunkHandler extends tChunkHandler {
     }
     //end interface IWrappedLoader
 }
-export class tP3DFileHandler {
+class radLoadObject { }
+class radLoadFileLoader extends radLoadObject { }
+class radLoadRequest extends radLoadObject {}
+class radLoadStream extends radLoadObject {}
+class radLoadUpdatableRequest extends radLoadRequest {
+    m_pStream: radLoadStream
+    SetStream(stream: radLoadStream) { this.m_pStream = stream }
+    GetStream(): radLoadStream { return new radLoadStream }
+}
+export class tFileHandler extends radLoadFileLoader {
+    Load(file: tFile): tLoadStatus { return tLoadStatus.LOAD_OK }
+    LoadFile(request: radLoadUpdatableRequest) {
+        const file: tFile = request.GetStream() as tFile
+        this.Load(file)
+    }
+}
+export class tP3DFileHandler extends tFileHandler {
     nExtensions: int
-    extensions: char[]
+    extensions: char[] = []
 
     constructor(n?: int) {
+        super()
         this.nExtensions = 1
-        this.extensions[0] = `.p3d`
+        this.extensions.push(`.p3d`)
     }
-
     AddHandler(l: tChunkHandler, chunkID?: unsigned): tChunkHandler {
-        // radLoad.AddDataLoader(l, chunkID ?? l.GetChunkID())
+        radLoad.AddDataLoader(l, chunkID ?? l.GetChunkID())
         return l
     }
-    public Load(file: tFile): tLoadStatus {
+    GetHandler(chunkID: unsigned): tChunkHandler {
+        return radLoad.GetDataLoader(chunkID) as tChunkHandler
+    }
+    override Load(file: tFile): tLoadStatus {
         const chunkFile = new tChunkFile(file)
         let fileStatus = tLoadStatus.LOAD_OK
 
@@ -114,11 +135,13 @@ interface ChunkListenerCallback {
 }
 export class AllWrappers {
     static mspInstance: AllWrappers
-    mpLoaders: (tSimpleChunkHandler | null)[]//IWrappedLoader[]// [msNumWrappers]
+    mpLoaders: tSimpleChunkHandler[]//IWrappedLoader[]// [msNumWrappers]
 
     constructor() {
+        this.mpLoaders = []
         for (let i = AllWrappers._enum.msNumWrappers - 1; i > - 1; i--) {
-            this.mpLoaders![i] = NULL
+            // this.mpLoaders![i] = NULL
+            this.mpLoaders.push(new FenceLoader)
         }
         this.CoupleAllLoaders()
     }
@@ -291,7 +314,7 @@ export class TreeDSGLoader extends tSimpleChunkHandler {//implements IWrappedLoa
             f.EndChunk()
         }
         this.mpListenerCB.OnChunkLoaded(pSpatialTree, this.mUserData, this._id)
-        console.log(pSpatialTree)
+        // console.log(pSpatialTree)
         return NULL
     }
 }

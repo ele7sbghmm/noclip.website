@@ -136,15 +136,20 @@ class WorldRenderLayer extends RenderLayer {
 }
 export function GetRenderManager() { return RenderManager.GetInstance() }
 export class RenderManager {
+    SetLoadData(LevelSlot: any, level: any, M1: any) {
+        throw new Error("Method not implemented.")
+    }
+    LoadAllNeededData() {
+        throw new Error("Method not implemented.")
+    }
     static mspInstance: RenderManager
-    mpRenderLayers: WorldRenderLayer[]//[RenderEnums.numLayers]
+    mpRenderLayers: WorldRenderLayer[] = [new WorldRenderLayer, new WorldRenderLayer, new WorldRenderLayer, new WorldRenderLayer, new WorldRenderLayer]//[RenderEnums.numLayers]
     mCurWorldLayer: int
 
-    constructor() {
-        this.InitLayers()
-    }
+    constructor() { this.InitLayers() }
     static CreateInstance() {
         RenderManager.mspInstance = new RenderManager()
+        return RenderManager.mspInstance
     }
     static GetInstance(): RenderManager {
         return RenderManager.mspInstance
@@ -215,7 +220,7 @@ export class RenderManager {
         for (let i: int = RenderEnums.LayerEnum.numLayers - 1; i > -1; i--) {
             switch (i) {
                 case RenderEnums.LayerEnum.LevelSlot:
-                    this.mpRenderLayers[i] = new WorldRenderLayer
+                    this.mpRenderLayers![i] = new WorldRenderLayer
                     break
                 // case RenderEnums.LayerEnum.GUI:
                 //     this.mpRenderLayers[i] = new FrontEndRenderLayer
@@ -504,7 +509,7 @@ export class RenderFlow {
     // mpIntersectManager: IntersectManager
 
     constructor() {
-        // this.mpRenderManager = RenderManager.CreateInstance()
+        this.mpRenderManager = RenderManager.CreateInstance()
         // this.mpDSGFactory = DSGFactory.CreateInstance()
         this.mpLoadWrappers = AllWrappers.CreateInstance()
         // this.mpIntersectManager = IntersectManager.CreateInstance()
@@ -519,8 +524,18 @@ export class RenderFlow {
         assert(RenderFlow.spInstance != NULL)
         return RenderFlow.spInstance
     }
+    DoAllRegistration() {
+        // ParticleSystemRandomData.SetUp()
+
+        // GetEventManager().AddListener(GetRenderManager(),(EventEnum)(EVENT_LOCATOR+LocatorEvent.DYNAMIC_ZONE))
+        // GetEventManager().AddListener(GetRenderManager(), EVENT_FIRST_DYNAMIC_ZONE_START)
+        // GetEventManager().AddListener(GetRenderManager(), EVENT_ALL_DYNAMIC_ZONES_DUMPED)
+        // GetEventManager().AddListener(GetRenderManager(),(EventEnum)(EVENT_LOCATOR + LocatorEvent.OCCLUSION_ZONE))
+        // GetEventManager().AddListener(GetRenderManager(), static_cast<EventEnum>(EVENT_LOCATOR + LocatorEvent, LIGHT_CHANGE))
+        // GetEventManager().AddListener(GetRenderManager(), EVENT_MISSION_RESET)
+    }
 }
-namespace RenderEnums {
+export namespace RenderEnums {
     export enum LayerEnum {
         GUI = 0x00000000,
         PresentationSlot,

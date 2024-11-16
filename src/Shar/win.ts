@@ -1,8 +1,38 @@
-import { GetAllWrappers, AllWrappers, TreeDSGLoader, FenceLoader, IntersectLoader, WorldSphereLoader } from './loaders.js'
-import { GetRenderManager } from './renderer.js'
-import { tP3DFileHandler } from './loaders.js'
+import { Game, Platform } from './game.js'
+import { tP3DFileHandler, GetAllWrappers, AllWrappers, TreeDSGLoader, FenceLoader, IntersectLoader, WorldSphereLoader, radLoadInitialize } from './loaders.js'
+import { GetRenderManager, RenderFlow } from './renderer.js'
+import { LoadingManager } from './loadingmanager.js'
+import { WorldPhysicsManager } from './physics.js'
 
-export class Win32Platform {
+export function WinMain() {
+    CreateSingletons()
+    
+    const pPlatform: Win32Platform = Win32Platform.CreateInstance()
+    const pGame = Game.CreateInstance(pPlatform)
+    pGame.Initialize()
+    
+}
+function CreateSingletons() {
+    const pLoadingManager = LoadingManager.CreateInstance()
+    const pWPM = WorldPhysicsManager.CreateInstance()
+    // const pPM: PresentationManager = PresentationManager.CreateInstance()
+    const pRenderFlow = RenderFlow.CreateInstance()
+}
+class Win32Platform extends Platform {
+    static spInstance: Win32Platform
+    static CreateInstance() {
+        Win32Platform.spInstance = new Win32Platform
+        return Win32Platform.spInstance
+    }
+    static GetInstance() {
+        return Win32Platform.spInstance
+    }
+    static InitializeFoundation() {
+        radLoadInitialize()
+    }
+    InitializePlatform() {
+        this.InitializePure3D()
+    }
     InitializePure3D() {
         const p3d = new tP3DFileHandler
 
@@ -15,12 +45,12 @@ export class Win32Platform {
         // const pSPL = GetAllWrappers().mpLoader(AllWrappers._enum.msStaticPhys) as StaticPhysLoader
         // // pSPL.SetRegdListener(GetRenderManager(), 0)
         // p3d.AddHandler(pSPL)
-        // const pTDL = GetAllWrappers().mpLoader(AllWrappers._enum.msTreeDSG) as TreeDSGLoader
-        // // pTDL.SetRegdListener(GetRenderManager(), 0)
-        // p3d.AddHandler(pTDL)
-        // const pFL = GetAllWrappers().mpLoader(AllWrappers._enum.msFenceEntity) as FenceLoader
-        // // pFL.SetRegdListener(GetRenderManager(), 0)
-        // p3d.AddHandler(pFL)
+        const pTDL = GetAllWrappers().mpLoader(AllWrappers._enum.msTreeDSG) as TreeDSGLoader
+        // pTDL.SetRegdListener(GetRenderManager(), 0)
+        p3d.AddHandler(pTDL)
+        const pFL = GetAllWrappers().mpLoader(AllWrappers._enum.msFenceEntity) as FenceLoader
+        // pFL.SetRegdListener(GetRenderManager(), 0)
+        p3d.AddHandler(pFL)
         // const pIL = GetAllWrappers().mpLoader(AllWrappers._enum.msIntersectDSG) as IntersectLoader
         // // pIL.SetRegdListener(GetRenderManager(), 0)
         // p3d.AddHandler(pIL)

@@ -13,7 +13,7 @@ export type Chunk = {
 
 export class tFile extends Reader {
     public GetPosition() { return this.get_offset() }
-    public Advance(offs: number) { return this.seek(offs) }
+    public Advance(offs: number) { return this.seek_forward(offs) }
 }
 export class tChunkFile {
     public chunkStack: Chunk[] = []
