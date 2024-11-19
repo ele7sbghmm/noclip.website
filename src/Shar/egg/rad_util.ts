@@ -1,4 +1,4 @@
-import { assert } from '../util.js'
+import { assert } from '../../util.js'
 import { rmt } from './math.js'
 
 type float = number

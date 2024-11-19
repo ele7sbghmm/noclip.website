@@ -1,4 +1,4 @@
-import { assert } from '../util.js'
+import { assert } from '../../util.js'
 import { AnimCollisionEntityDSG, AnimEntityDSG, DynaPhysDSG, FenceEntityDSG, IntersectDSG, PathSegment, RoadSegment, StaticEntityDSG, StaticPhysDSG, TriggerVolume } from './dsg.js'
 import { AAPlane3f, Bounds3f, BoxPts, FixedArray, ISpatialProxyAA, NodeSwapArray, SwapArray, tEntity } from './rad_util.js'
 

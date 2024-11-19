@@ -1,10 +1,10 @@
-import { assert } from '../util.js'
+import { assert } from '../../util.js'
 
 import { rmt } from './math.js'
-import { read_vector } from './reader.js'
+import { read_vector } from '../reader.js'
 import { tChunkFile, tFile } from './file.js'
 import { SpatialTree } from './spatial.js'
-import { BoxPts, Bounds3f, tEntity, Vector3f } from './rad_util.js'
+import { BoxPts, Bounds3f, tEntity, Vector3f } from '../rad_util.js'
 import { FenceEntityDSG, IntersectDSG } from './dsg.js'
 import { RenderManager } from './renderer.js'
 

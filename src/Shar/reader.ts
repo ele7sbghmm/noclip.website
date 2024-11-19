@@ -1,7 +1,8 @@
 import { assert } from '../util.js'
 import { NamedArrayBufferSlice } from '../DataFetcher.js'
 
-import { rmt } from './math.js'
+import { rmt } from './egg/math.js'
+import { vec3 } from 'gl-matrix'
 
 export class Reader {
     readonly name: string
@@ -73,3 +74,4 @@ export function read_matrix(view: Reader): rmt.Matrix {
         view.f32(), view.f32(), view.f32(), view.f32(),
     )
 }
+
