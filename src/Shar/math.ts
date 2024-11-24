@@ -8,8 +8,8 @@ export namespace rmt {
             public z: number,
         ) { }
         _to_array() { return [this.x, this.y, this.z] }
-        
-        Set(C1: float, C2: float, C3: float) { this.x = C1; this.y = C2; this.z = C3 }        
+
+        Set(C1: float, C2: float, C3: float) { this.x = C1; this.y = C2; this.z = C3 }
         Add(vect: Vector): Vector {
             return new Vector(
                 this.x + vect.x,
@@ -59,9 +59,9 @@ export namespace rmt {
     export class Box3D {
         low: Vector
         high: Vector
-}
+    }
     export class Sphere {
         centre: Vector
-        radius: float 
+        radius: float
     }
 }

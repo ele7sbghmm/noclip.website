@@ -1,4 +1,3 @@
-
 import { vec3 } from 'gl-matrix';
 
 import { DeviceProgram } from '../Program.js';

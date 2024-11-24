@@ -1,8 +1,8 @@
-import { assert } from '../util.js'
+import { assert, readString } from '../util.js'
 import { NamedArrayBufferSlice } from '../DataFetcher.js'
-
-import { rmt } from './egg/math.js'
 import { vec3 } from 'gl-matrix'
+
+import { rmt } from './math.js'
 
 export class Reader {
     readonly name: string
@@ -16,6 +16,9 @@ export class Reader {
         this.offset = slice.byteOffset
         this.length = slice.byteLength
     }
+    public get_offset() {
+        return this.offset
+    }
     public seek(offs: number) {
         assert(offs <= this.length)
         this.offset = offs
@@ -23,8 +26,18 @@ export class Reader {
     public seek_forward(offs: number) {
         this.seek(this.offset + offs)
     }
-    public get_offset(): number {
-        return this.offset
+    public get_slice(len: number): ArrayBuffer {
+        const slc = this.view.buffer.slice(this.offset, this.offset + len)
+        this.offset += len
+        return slc
+    }
+    public get_string(len: number) {
+        const str = new TextDecoder('ascii')!.decode(this.get_slice(len))
+        return str
+    }
+    public get_nstring() {
+        const len = this.u8()
+        return this.get_string(len).split(`\0`)[0]
     }
     public f32(size: number = 4, le: boolean = true) {
         const value = this.view.getFloat32(this.offset, le)
@@ -74,4 +87,6 @@ export function read_matrix(view: Reader): rmt.Matrix {
         view.f32(), view.f32(), view.f32(), view.f32(),
     )
 }
-
+export function read_vec3(view: Reader): vec3 {
+    return vec3.fromValues(view.f32(), view.f32(), view.f32())
+}

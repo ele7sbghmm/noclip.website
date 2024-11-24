@@ -1,4 +1,3 @@
-import { assert } from '../../util.js'
 import { rmt } from './math.js'
 
 type float = number
@@ -33,7 +32,7 @@ export class ReserveArray<T> extends FixedArray<T> {
         this.mUseSize = 0
     }
     AddUse(iCountSize: int) {
-        assert((iCountSize + this.mUseSize) <= this.mSize)
+        // assert((iCountSize + this.mUseSize) <= this.mSize)
         this.mUseSize += iCountSize
     }
 }
@@ -51,17 +50,17 @@ export class NodeSwapArray<T> extends SwapArray<T> { }
 export abstract class ISpatialProxyAA {
     msIntersectionEpsilon = 0.01
     abstract CompareTo__AAPlane3f(irPlane: AAPlane3f): float
-     // <0.0   -   Inside Spatial Proxy
-     // =0.0   -   On Spatial Proxy Surface
-     // >0.0   -   Outside Spatial Proxy
+    // <0.0   -   Inside Spatial Proxy
+    // =0.0   -   On Spatial Proxy Surface
+    // >0.0   -   Outside Spatial Proxy
     abstract CompareTo__Vector3f(irPoint: Vector3f): float
     abstract CompareToXZ(irPoint: Vector3f): float
 }
 export class BoxPts extends ISpatialProxyAA {
     mBounds: Bounds3f
-     // <0.0   -   Inside Spatial Proxy
-     // =0.0   -   On Spatial Proxy Surface
-     // >0.0   -   Outside Spatial Proxy
+    // <0.0   -   Inside Spatial Proxy
+    // =0.0   -   On Spatial Proxy Surface
+    // >0.0   -   Outside Spatial Proxy
     CompareTo__AAPlane3f(irPlane: AAPlane3f) {
         if (irPlane.mPosn - this.msIntersectionEpsilon
             <= this.mBounds._as_array__mMin()[irPlane.mAxis]) {
