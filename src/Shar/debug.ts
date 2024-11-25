@@ -1,6 +1,6 @@
 import { assert, nArray } from '../util.js'
 import { vec3, vec4, mat4, mat3, ReadonlyMat4, ReadonlyVec3 } from 'gl-matrix'
-import { Blue, Color, colorNewFromRGBA, colorToCSS, Cyan, Green, Magenta, Red, White } from "../Color.js";
+import { Blue, Color, colorNewFromRGBA, colorToCSS, Cyan, Green, Magenta, Red, White, Yellow } from "../Color.js";
 import { 
     drawWorldSpaceAABB,
     drawWorldSpacePoint,
@@ -20,7 +20,7 @@ import { GfxDevice } from "../gfx/platform/GfxPlatform.js";
 import { GfxRenderInstList, GfxRenderInstManager } from "../gfx/render/GfxRenderInstManager.js";
 import { SceneGfx, ViewerRenderInput } from "../viewer.js";
 
-import { WorldScene } from './world.js'
+import { Sc, Sector, WorldScene } from './world.js'
 import { GfxRenderHelper } from '../gfx/render/GfxRenderHelper.js';
 import { SceneContext } from '../SceneBase.js';
 import { UVENRenderer } from '../BeetleAdventureRacing/ParsedFiles/UVEN.js';
@@ -48,7 +48,7 @@ export class Bug implements SceneGfx {
     private show_intersects: boolean = false
     private show_static_phys: boolean = false
     private show_load_zones: boolean = true
-    constructor(public world_scene: WorldScene, device: GfxDevice) {
+    constructor(public sc: Sc, device: GfxDevice) {
         this.renderHelper = new GfxRenderHelper(device);
     
         // this.uvtrRenderer = rendererStore.getOrCreateRenderer(uvtr, () => new UVTRRenderer(uvtr, rendererStore))
@@ -71,22 +71,27 @@ export class Bug implements SceneGfx {
         // debuggingToolsPanel.contents.appendChild(showTextureIndicesCheckbox.elem);
 
         // if (this.trackDataRenderer !== undefined) {
-        const trackDataPanel = new UI.Panel();
+        const trackDataPanel = new UI.Panel()
 
-        trackDataPanel.customHeaderBackgroundColor = UI.COOL_BLUE_COLOR;
-        trackDataPanel.setTitle(UI.LAYER_ICON, 'Display Track Data');
+        trackDataPanel.customHeaderBackgroundColor = UI.COOL_BLUE_COLOR
+        trackDataPanel.setTitle(UI.LAYER_ICON, 'Display Track Data')
 
         let addCheckBox = (label: string, setMethod: ((val: boolean) => void)) => {
-            let chk = new UI.Checkbox(label);
-            chk.onchanged = () => { setMethod(chk.checked); };
-            trackDataPanel.contents.appendChild(chk.elem);
+            let chk = new UI.Checkbox(label)
+            chk.onchanged = () => { setMethod(chk.checked); }
+            trackDataPanel.contents.appendChild(chk.elem)
         }
 
-        addCheckBox("Show tree", val => this.show_tree = val);
-        addCheckBox("Show fences", val => this.show_fences = val);
-        addCheckBox("Show intersects", val => this.show_intersects = val);
-        addCheckBox("Show static phys", val => this.show_static_phys = val);
-        addCheckBox("Show load zones", val => this.show_load_zones = val);
+        addCheckBox("Show tree", val => this.show_tree = val)
+        addCheckBox("Show fences", val => this.show_fences = val)
+        addCheckBox("Show intersects", val => this.show_intersects = val)
+        addCheckBox("Show static phys", val => this.show_static_phys = val)
+        addCheckBox("Show load zones", val => this.show_load_zones = val)
+        for (let i = 0; i < 20; i++) {
+            const sect = this.sc.scene.sectors[i]
+            if (sect == null) continue
+            addCheckBox(sect.name, val => sect.active = val)
+        }
 
         // addCheckBox("Display tree", val => this.show_tree = val);
         // addCheckBox("Track up directions and widths", val => this.trackDataRenderer.alsoShowTrackUpVectorAndWidthVector = val);
@@ -108,10 +113,9 @@ export class Bug implements SceneGfx {
         // }
     }
     drawLoadZones(ctx: CanvasRenderingContext2D, clipFromWorldMatrix: ReadonlyMat4) {//, color: Color, thickness: number) {
-        const tvt = this.world_scene.GetTriggerVolumeTracker()
         const thickness = 4
         const nPoints = 20
-        tvt.mTriggerVolumes.forEach((volume, index) => {
+        this.sc.scene.load_zones.forEach((volume: TriggerVolume) => {
             const zel = volume.mLocator as ZoneEventLocator
             switch (volume.constructor.name) {
                 case 'RectTriggerVolume':
@@ -198,12 +202,11 @@ export class Bug implements SceneGfx {
         drawWorldSpaceLine(ctx, clipFromWorldMatrix, p2, p6, color, thickness)
         drawWorldSpaceLine(ctx, clipFromWorldMatrix, p3, p7, color, thickness)
     }
-    drawStaticPhys(ctx: CanvasRenderingContext2D, clipFromWorldMatrix: ReadonlyMat4) {
-        const sp_len = this.world_scene.static_phys.length
-        for (let i = 0; i < sp_len; i++) {
-            const sp = this.world_scene.static_phys[i]
+    drawStaticPhys(static_phys: StaticPhysDSG[], ctx: CanvasRenderingContext2D, clipFromWorldMatrix: ReadonlyMat4) {
+        for (let i = 0; i < static_phys.length; i++) {
+            const sp = static_phys[i]
             const volume = sp.mpSimStateObj!.mCollisionObject!.mCollisionVolume!
-            this.recurseDrawCollision(ctx, clipFromWorldMatrix, volume, sp.color, 1)
+            this.recurseDrawCollision(ctx, clipFromWorldMatrix, volume, sp.color, 2)
         }
     }
     recurseDrawCollision(ctx: CanvasRenderingContext2D,
@@ -285,7 +288,7 @@ export class Bug implements SceneGfx {
         const scratchVec3a = vec3.create()
         const scratchVec3b = vec3.create()
         // axis = vec3.fromValues(0.975, .22, 0)
-        const unit = cylinder.mAxis[0] < 0.9 ? Vec3UnitX : Vec3UnitZ
+        const unit = Math.abs(cylinder.mAxis[0]) < 0.8 ? Vec3UnitX : Vec3UnitZ
 
         for (let i = 0; i < nPoints; i++) {
             const t0 = ((i + 0) / nPoints) * MathConstants.TAU;
@@ -337,27 +340,29 @@ export class Bug implements SceneGfx {
                                         axis: ReadonlyVec3, 
                                         color = Magenta, 
                                         nPoints: number = 32): void { */
+                const adjusted_y = vec3.create()
+                vec3.add(adjusted_y, sphere.mPosition, vec3.fromValues(0, sphere.mSphereRadius / 2, 0))
                 drawWorldSpaceCircle(ctx,
                                      clipFromWorldMatrix,
-                                     sphere.mPosition,
+                                     adjusted_y,
                                      sphere.mSphereRadius,
                                      vec3.fromValues(1, 0, 0),
                                      color,
-                                     10)
+                                     12)
                 drawWorldSpaceCircle(ctx,
                                      clipFromWorldMatrix,
-                                     sphere.mPosition,
+                                     adjusted_y,
                                      sphere.mSphereRadius,
                                      vec3.fromValues(0, 1, 0),
                                      color,
-                                     10)
+                                     12)
                 drawWorldSpaceCircle(ctx,
                                      clipFromWorldMatrix,
-                                     sphere.mPosition,
+                                     adjusted_y,
                                      sphere.mSphereRadius,
                                      vec3.fromValues(0, 0, 1),
                                      color,
-                                     10)
+                                     12)
                 break
             }
             case CollisionVolumeTypeEnum.CylinderVolumeType: {
@@ -365,7 +370,7 @@ export class Bug implements SceneGfx {
                 this.drawCylinder(ctx,
                                   clipFromWorldMatrix,
                                   cylinder,
-                                  16,
+                                  8,
                                   color,
                                   thickness)
                 break
@@ -420,9 +425,9 @@ export class Bug implements SceneGfx {
         const cw = ctx.canvas.width
         const ch = ctx.canvas.height
         if (this.show_tree) {
-            const tree = this.world_scene.tree
+            const tree = this.sc.scene.tree
             for (let i = 0; i < tree.n_nodes; i++) {
-                let node = this.world_scene.tree.nodes[i]
+                let node = this.sc.scene.tree.nodes[i]
                 if (node === undefined) continue
                 switch (node.axis) {
                     case 0:  {
@@ -445,14 +450,17 @@ export class Bug implements SceneGfx {
                 }
             }
         }
+        if (this.show_load_zones) {
+            this.drawLoadZones(ctx, clipFromWorldMatrix)
+        }
         if (this.show_fences) {
             const p = nArray(10, () => vec4.create());
             ctx.beginPath()
 
-            const fence_len = this.world_scene.fences.length
+            const fence_len = this.sc.scene.fences.length
             for (let i = 0; i < fence_len; i++) {
-                let [sx, sy, sz] = this.world_scene.fences[i].start
-                let [ex, ey, ez] = this.world_scene.fences[i].end
+                let [sx, sy, sz] = this.sc.scene.fences[i].start
+                let [ex, ey, ez] = this.sc.scene.fences[i].end
 
                 vec4.set(p[0], sx, sy, sz, 1.0)
                 vec4.set(p[1], ex, ey, ez, 1.0)
@@ -489,58 +497,61 @@ export class Bug implements SceneGfx {
             colorNewFromRGBA(0.0, 0.5, 0.8, 1), 
             4
         )*/
-        
-        if (this.show_intersects) {
-            const int_len = this.world_scene.intersects.length
-            const p = nArray(10, () => vec4.create());
-            for (let i = 0; i < int_len; i++) {
-                const int = this.world_scene.intersects[i]
 
-                const indices_len = int.mTriIndices.length
 
-                for (let j = 0; j < indices_len ; j += 3) {
-                    let [a, b, c] = [int.mTriIndices[j + 0],
-                                     int.mTriIndices[j + 1],
-                                     int.mTriIndices[j + 2]]
-                    if (a == b || a == c || b == c) continue
-                    // drawWorldSpaceLine(ctx, clipFromWorldMatrix, int.mTriPts[a], int.mTriPts[b], White,  1)
-                    // drawWorldSpaceLine(ctx, clipFromWorldMatrix, int.mTriPts[b], int.mTriPts[c], White,  1)
-                    // drawWorldSpaceLine(ctx, clipFromWorldMatrix, int.mTriPts[c], int.mTriPts[a], White,  1)
-            
-                    const [ax, ay, az] = int.mTriPts[a]
-                    const [bx, by, bz] = int.mTriPts[b]
-                    const [cx, cy, cz] = int.mTriPts[c]
-                    vec4.set(p[0], ax, ay, az, 1.0)
-                    vec4.set(p[1], bx, by, bz, 1.0)
-                    vec4.set(p[2], cx, cy, cz, 1.0)
-                    transformToClipSpace(clipFromWorldMatrix, p, 3)
+        this.sc.scene.sectors.forEach((sect: Sector | null) => {
+            if (sect == null) return
+            if (sect.active == false) return
 
-                    ctx.beginPath()
-                    drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
-                    drawClipSpaceLine(ctx, p[1], p[2], p[8], p[9])
-                    drawClipSpaceLine(ctx, p[2], p[0], p[8], p[9])
-                    ctx.closePath()
-                    ctx.lineWidth = 1
-                    ctx.strokeStyle = colorToCSS(White)
-                    ctx.stroke()
-                    //     // export function drawClipSpaceLine(ctx: CanvasRenderingContext2D, 
-                    //     //                                    p0: ReadonlyVec4, 
-                    //     //                                    p1: ReadonlyVec4, 
-                    //     //                                    s0: vec4, 
-                    //     //                                    s1: vec4): void {
-                    //     // let [p0, p1, s0, s1] = [p[0], p[1], p[8], p[9]]
-                    //     // if (!clipLineAndDivide(s0, s1, p0, p1)) return;
-                    //     // ctx.moveTo((s0[0] + 1) * cw / 2, ((-s0[1] + 1) * ch / 2));
-                    //     // ctx.lineTo((s1[0] + 1) * cw / 2, ((-s1[1] + 1) * ch / 2));
+            if (this.show_static_phys) {
+                this.drawStaticPhys(sect.static_phys, ctx, clipFromWorldMatrix)
+            }
+            if (this.show_intersects) {
+                const int_len = sect!.intersects.length
+                const p = nArray(10, () => vec4.create());
+                for (let i = 0; i < int_len; i++) {
+                    const int = sect!.intersects[i]
+
+                    const indices_len = int.mTriIndices.length
+
+                    for (let j = 0; j < indices_len ; j += 3) {
+                        let [a, b, c] = [int.mTriIndices[j + 0],
+                                        int.mTriIndices[j + 1],
+                                        int.mTriIndices[j + 2]]
+                        if (a == b || a == c || b == c) continue
+                        drawWorldSpaceLine(ctx, clipFromWorldMatrix, int.mTriPts[a], int.mTriPts[b], White, 1)
+                        drawWorldSpaceLine(ctx, clipFromWorldMatrix, int.mTriPts[b], int.mTriPts[c], White, 1)
+                        drawWorldSpaceLine(ctx, clipFromWorldMatrix, int.mTriPts[c], int.mTriPts[a], White, 1)
+                
+                        // const [ax, ay, az] = int.mTriPts[a]
+                        // const [bx, by, bz] = int.mTriPts[b]
+                        // const [cx, cy, cz] = int.mTriPts[c]
+                        // vec4.set(p[0], ax, ay, az, 1.0)
+                        // vec4.set(p[1], bx, by, bz, 1.0)
+                        // vec4.set(p[2], cx, cy, cz, 1.0)
+                        // transformToClipSpace(clipFromWorldMatrix, p, 3)
+
+                        // ctx.beginPath()
+                        // drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
+                        // drawClipSpaceLine(ctx, p[1], p[2], p[8], p[9])
+                        // drawClipSpaceLine(ctx, p[2], p[0], p[8], p[9])
+                        // ctx.closePath()
+                        // ctx.lineWidth = 1
+                        // ctx.strokeStyle = colorToCSS(White)
+                        // ctx.stroke()
+                        //     // export function drawClipSpaceLine(ctx: CanvasRenderingContext2D, 
+                        //     //                                    p0: ReadonlyVec4, 
+                        //     //                                    p1: ReadonlyVec4, 
+                        //     //                                    s0: vec4, 
+                        //     //                                    s1: vec4): void {
+                        //     // let [p0, p1, s0, s1] = [p[0], p[1], p[8], p[9]]
+                        //     // if (!clipLineAndDivide(s0, s1, p0, p1)) return;
+                        //     // ctx.moveTo((s0[0] + 1) * cw / 2, ((-s0[1] + 1) * ch / 2));
+                        //     // ctx.lineTo((s1[0] + 1) * cw / 2, ((-s1[1] + 1) * ch / 2));
+                    }
                 }
             }
-        }
-        if (this.show_static_phys) {
-            this.drawStaticPhys(ctx, clipFromWorldMatrix)
-        }
-        if (this.show_load_zones) {
-            this.drawLoadZones(ctx, clipFromWorldMatrix)
-        }
+        })
     }
     public render(device: GfxDevice, viewerInput: ViewerRenderInput) {
         const builder = this.renderHelper.renderGraph.newGraphBuilder();

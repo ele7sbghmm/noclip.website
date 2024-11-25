@@ -1,9 +1,8 @@
 import { NamedArrayBufferSlice } from '../DataFetcher.js'
 import { SRR2 } from './srrchunks.js'
-import { Simulation } from './chunkids.js'
 import { tEntity, Tree, Fence, Intersect, StaticPhysDSG, Locator } from './dsg.js'
 import { Reader } from './reader.js'
-import { WorldScene } from './world.js'
+import { Sc, WorldScene } from './world.js'
 
 const HEADER_SIZE = 12
 const data_handlers: { [key: number]: tSimpleChunkHandler } = {
@@ -14,7 +13,7 @@ const data_handlers: { [key: number]: tSimpleChunkHandler } = {
     [SRR2.ChunkID.LOCATOR]: new Locator,
 }
 export interface tSimpleChunkHandler {
-    load_object(scene: WorldScene, f: tChunkFile): tEntity
+    load_object(sc: Sc, sector: number, f: tChunkFile): tEntity
 }
 type Chunk = { id: number, ds: number, cs: number, sp: number }
 export class tChunkFile {
@@ -71,12 +70,12 @@ export class tChunkFile {
 }
 export class tP3DFileHandler {
     chunk_file: tChunkFile
-    load(scene: WorldScene, slice: NamedArrayBufferSlice) {
+    load(sc: Sc, sector: number, slice: NamedArrayBufferSlice) {
         const chunk_file = new tChunkFile(slice)
         while (chunk_file.chunks_remaining()) {
             chunk_file.begin_chunk()
             let h: tSimpleChunkHandler = data_handlers[chunk_file.get_current_id()]
-            if (h !== undefined) h.load_object(scene, chunk_file)
+            if (h !== undefined || h != null) h.load_object(sc, sector, chunk_file)
             chunk_file.end_chunk()
         }
     }

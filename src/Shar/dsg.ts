@@ -4,7 +4,7 @@ import { read_vec3 } from './reader.js'
 import { SRR2 } from './srrchunks.js'
 import { Pure3D, Simulation } from './chunkids.js'
 import { tSimpleChunkHandler, tChunkFile } from './file.js'
-import { WorldScene } from './world.js'
+import { Sc, WorldScene } from './world.js'
 import { AABB } from '../Geometry.js'
 import { Color, colorNewFromRGBA } from '../Color.js'
 
@@ -20,7 +20,7 @@ export class Tree extends tEntity implements tSimpleChunkHandler {
     bounds_max: vec3
     nodes: spatial_node[] = []
 
-    load_object(scene: WorldScene, f: tChunkFile): tEntity {
+    load_object(sc: Sc, sector: number, f: tChunkFile): tEntity {
         const tree = new Tree
         tree.n_nodes = f.real_file.i32()
         tree.bounds_min = read_vec3(f.real_file)
@@ -55,7 +55,7 @@ export class Tree extends tEntity implements tSimpleChunkHandler {
             }
             f.end_chunk()
         }
-        scene.set_tree(tree)
+        sc.scene.set_tree(tree)
         return new tEntity
     }
 }
@@ -64,7 +64,7 @@ export class Fence extends tEntity implements tSimpleChunkHandler {
     end: vec3
     normal: vec3
 
-    load_object(scene: WorldScene, f: tChunkFile): tEntity {
+    load_object(sc: Sc, sector: number, f: tChunkFile): tEntity {
         f.begin_chunk()
         const fence = new Fence
         switch (f.get_current_id()) {
@@ -75,7 +75,7 @@ export class Fence extends tEntity implements tSimpleChunkHandler {
             }
         }
         f.end_chunk()
-        scene.place(fence)
+        sc.scene.place_fence(fence)
         return fence
     }
 }
@@ -85,7 +85,7 @@ export class Intersect extends tEntity implements tSimpleChunkHandler {
     mTriNorms: vec3[] = []
     mTerrainType: number[] = []
 
-    load_object(scene: WorldScene, f: tChunkFile): tEntity {
+    load_object(sc: Sc, sector: number, f: tChunkFile): tEntity {
         const pIDSG = new Intersect
 
         let size = f.real_file.i32()
@@ -120,7 +120,7 @@ export class Intersect extends tEntity implements tSimpleChunkHandler {
                     const cz = f.real_file.f32()
                     const r = f.real_file.f32()
 
-                    // pIDSG. SetBoundingSphere(cx, cy, cz, r)
+                    // pIDSG.SetBoundingSphere(cx, cy, cz, r)
                     break
                 }
                 case SRR2.ChunkID.TERRAIN_TYPE: {
@@ -128,8 +128,8 @@ export class Intersect extends tEntity implements tSimpleChunkHandler {
                     size = f.real_file.i32()
                     for (let i = 0; i < size; i++) {
                         pIDSG.mTerrainType.push(f.real_file.u8())
-                        break
                     }
+                    break
                 }
                 default:
                     break
@@ -137,7 +137,8 @@ export class Intersect extends tEntity implements tSimpleChunkHandler {
             f.end_chunk()
         }
         // mpListenerCB.OnChunkLoaded( pIDSG, mUserData, _id )
-        scene.place(pIDSG)
+        assert(sc.scene.sectors[sector] != null)
+        sc.scene.sectors[sector].place_intersect(pIDSG)
 
         return new tEntity// NULL//pIDSG
     }
@@ -152,7 +153,7 @@ export class CollisionObject extends tEntity implements tSimpleChunkHandler {
     mSimState: SimState
     mSelfCollisionList: SelfCollision[] = []
 
-    load_object(scene: WorldScene, f: tChunkFile): tEntity {
+    load_object(sc: Sc, sector: number, f: tChunkFile): tEntity {
         const newCollisionObject = new CollisionObject
         newCollisionObject.mCollisionVolumeOwner = new CollisionVolumeOwner
 
@@ -236,7 +237,8 @@ export class CollisionObject extends tEntity implements tSimpleChunkHandler {
         // }
         // newCollisionObject.SetPhysicsProperties(tmpprop)
 
-        scene.place(newCollisionObject)
+        assert(sc.scene.sectors[sector] != null)
+        // scene.sectors[sector].place_static_phys(newCollisionObject)
         return newCollisionObject
     }
     SetCollisionVolume(inCollisionVolume: CollisionVolume) {
@@ -489,7 +491,7 @@ export class StaticPhysDSG extends tEntity implements tSimpleChunkHandler {
 
     color: Color = colorNewFromRGBA(Math.random(), Math.random(), Math.random(), 1)
 
-    load_object(scene: WorldScene, f: tChunkFile): tEntity {
+    load_object(sc: Sc, sector: number, f: tChunkFile): tEntity {
         const name = f.real_file.get_nstring()
         const version = f.real_file.i32()
 
@@ -501,7 +503,7 @@ export class StaticPhysDSG extends tEntity implements tSimpleChunkHandler {
             f.begin_chunk()
             switch (f.get_current_id()) {
                 case Simulation.Collision.OBJECT: {
-                    const pCollObj: CollisionObject = new CollisionObject().load_object(scene, f) as CollisionObject
+                    const pCollObj: CollisionObject = new CollisionObject().load_object(sc, sector, f) as CollisionObject
                     pStaticPhysDSG.SetSimState(SimState.CreateStaticSimState(pCollObj))
                     break
                 }
@@ -519,7 +521,8 @@ export class StaticPhysDSG extends tEntity implements tSimpleChunkHandler {
             f.end_chunk()
         }
 
-        scene.place(pStaticPhysDSG)
+        assert(sc.scene.sectors[sector] != null, '')
+        sc.scene.sectors[sector].place_static_phys(pStaticPhysDSG)
         return pStaticPhysDSG
     }
     SetSimState(ipCollObj: SimState) {
@@ -568,7 +571,7 @@ class SimState {
 export class Locator extends tEntity implements tSimpleChunkHandler {
     msZoneNameCount: number = 0
     mLocation: vec3
-    load_object(scene: WorldScene, f: tChunkFile): tEntity {
+    load_object(sc: Sc, sector: number, f: tChunkFile): tEntity {
         const name = f.real_file.get_nstring()
         const ttype: LocatorType.Type = f.real_file.u32()
         const numElements = f.real_file.u32()
@@ -611,7 +614,8 @@ export class Locator extends tEntity implements tSimpleChunkHandler {
                     f.begin_chunk()
                     switch (f.get_current_id()) {
                         case SRR2.ChunkID.TRIGGER_VOLUME: {
-                            this.LoadTriggerVolume(scene, f, locator as TriggerLocator)
+                            let b = this.LoadTriggerVolume(sc.scene, sector, f, locator as TriggerLocator)
+                            if (b == false) return new tEntity
                             break
                         }
                         case SRR2.ChunkID.SPLINE: { break }
@@ -632,7 +636,7 @@ export class Locator extends tEntity implements tSimpleChunkHandler {
         }
         return locator
     }
-    LoadTriggerVolume(scene: WorldScene, f: tChunkFile, locator: TriggerLocator, addToTracker: boolean = true) {
+    LoadTriggerVolume(scene: WorldScene, sector: number, f: tChunkFile, locator: TriggerLocator, addToTracker: boolean = true) {
         let good = true
         if (f.get_current_id() == SRR2.ChunkID.TRIGGER_VOLUME) {
             let vol: TriggerVolume = new TriggerVolume
@@ -655,10 +659,10 @@ export class Locator extends tEntity implements tSimpleChunkHandler {
                 }
                 case TriggerVolume.Type.RECTANGLE: {
                     vol = new RectTriggerVolume(pos,
-                                                      vec3.fromValues(mat[0], mat[4], mat[8]),
-                                                      vec3.fromValues(mat[1], mat[5], mat[9]),
-                                                      vec3.fromValues(mat[2], mat[6], mat[10]),
-                                                      scale[0], scale[1], scale[2])
+                                                vec3.fromValues(mat[0], mat[4], mat[8]),
+                                                vec3.fromValues(mat[1], mat[5], mat[9]),
+                                                vec3.fromValues(mat[2], mat[6], mat[10]),
+                                                scale[0], scale[1], scale[2])
                 }
             }
             vol.name = volname
@@ -666,7 +670,10 @@ export class Locator extends tEntity implements tSimpleChunkHandler {
             locator.AddTriggerVolume(vol)
             vol.mPosition = pos
             if (addToTracker) {
-                scene.GetTriggerVolumeTracker().AddTrigger(vol)
+                // assert(scene.sectors[sector] != null)
+                if (scene.sectors[sector] == null) { return false }
+                if (sector == -1) { scene.place_loadzone(vol) }
+                // scene.sectors[sector].place_trigger(vol)
             }
             good = true
         } else { good = false }
