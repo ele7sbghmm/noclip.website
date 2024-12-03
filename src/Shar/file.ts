@@ -1,82 +1,106 @@
 import { NamedArrayBufferSlice } from '../DataFetcher.js'
-import { SRR2 } from './srrchunks.js'
-import { tEntity, Tree, Fence, Intersect, StaticPhysDSG, Locator } from './dsg.js'
-import { Reader } from './reader.js'
-import { Sc, WorldScene } from './world.js'
 
+import { Reader } from './reader.js'
+import { SRR2 } from './srrchunks.js'
+import { IntersectLoader, PathLoader, StaticPhysLoader, FenceLoader, TreeDSGLoader, LocatorLoader } from './loaders.js'
+// import { GetRenderManager } from './world.js'
+import { IEntityDSG } from './dsg.js'
+import { Instance } from './scenes.js'
+
+export class AllWrappers {
+
+}
+class tSimpleChunkHandler {
+    // mpListenerCB = GetRenderManager()
+    constructor(public id: number) { }
+    LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null { return null }
+    Load(level_instance: Instance, file: tChunkFile) { this.LoadObject(level_instance, file) }
+}
 const HEADER_SIZE = 12
 const data_handlers: { [key: number]: tSimpleChunkHandler } = {
-    [SRR2.ChunkID.TREE_DSG]: new Tree,
-    [SRR2.ChunkID.FENCE_DSG]: new Fence,
-    [SRR2.ChunkID.INTERSECT_DSG]: new Intersect,
-    [SRR2.ChunkID.STATIC_PHYS_DSG]: new StaticPhysDSG,
-    [SRR2.ChunkID.LOCATOR]: new Locator,
-}
-export interface tSimpleChunkHandler {
-    load_object(sc: Sc, sector: number, f: tChunkFile): tEntity
+    [SRR2.ChunkID.TREE_DSG]: new TreeDSGLoader,
+    [SRR2.ChunkID.FENCE_DSG]: new FenceLoader,
+    [SRR2.ChunkID.INTERSECT_DSG]: new IntersectLoader,
+    [SRR2.ChunkID.STATIC_PHYS_DSG]: new StaticPhysLoader,
+    [SRR2.ChunkID.LOCATOR]: new LocatorLoader,
+    [SRR2.ChunkID.PED_PATH]: new PathLoader,
+    [SRR2.ChunkID.PED_PATH_SEGMENT]: new PathLoader,
 }
 type Chunk = { id: number, ds: number, cs: number, sp: number }
 export class tChunkFile {
-    real_file: Reader
-    chunk_stack: Chunk[]
-    stack_top: number = -1
+    realFile: Reader
+    chunkStack: Chunk[]
+    stackTop: number = -1
     constructor(slice: NamedArrayBufferSlice) {
-        this.real_file = new Reader(slice)
-        this.chunk_stack = Array.from(
+        this.realFile = new Reader(slice)
+        this.chunkStack = Array.from(
             { length: 32 }, () => { return { id: 0, ds: 0, cs: 0, sp: 0 } }
         )
-        this.begin_chunk()
+        this.BeginChunk()
     }
-    chunks_remaining() {
-        let chunk: Chunk = this.chunk_stack[this.stack_top]
+    GetFloat() { return this.realFile.f32() }
+    GetLong() { return this.realFile.i32() }
+    GetInt() { return this.realFile.i32() }
+    GetShort() { return this.realFile.i16() }
+    GetChar() { return this.realFile.i8() }
+    GetUint() { return this.realFile.u32() }
+    GetUShort() { return this.realFile.u16() }
+    GetUChar() { return this.realFile.u8() }
+    GetByte() { return this.realFile.u8() }
+
+    ChunksRemaining() {
+        const chunk: Chunk = this.chunkStack[this.stackTop]
         return (chunk.cs > chunk.ds)
-            && (this.real_file.get_offset() < (chunk.sp + chunk.cs))
+            && (this.realFile.get_offset() < (chunk.sp + chunk.cs))
     }
-    begin_chunk(chunk_id?: number) {
-        this.stack_top++;
-        if (this.stack_top != 0) {
-            const start = this.chunk_stack[this.stack_top - 1].sp
-                + this.chunk_stack[this.stack_top - 1].ds
-            if (this.real_file.get_offset() < start)
-                this.real_file.seek_forward(start - this.real_file.get_offset())
+    BeginChunk(chunkID?: number) {
+        this.stackTop++;
+        if (this.stackTop != 0) {
+            const start = this.chunkStack[this.stackTop - 1].sp
+                + this.chunkStack[this.stackTop - 1].ds
+            if (this.realFile.get_offset() < start)
+                this.realFile.seek_forward(start - this.realFile.get_offset())
         }
-        this.chunk_stack[this.stack_top].sp =
-            (chunk_id ? -4 : 0) + this.real_file.get_offset()
+        this.chunkStack[this.stackTop].sp =
+            (chunkID ? -4 : 0) + this.realFile.get_offset()
 
-        this.chunk_stack[this.stack_top].id = chunk_id ?? this.real_file.u32()
-        this.chunk_stack[this.stack_top].ds = this.real_file.u32()
-        this.chunk_stack[this.stack_top].cs = this.real_file.u32()
+        this.chunkStack[this.stackTop].id = chunkID ?? this.realFile.u32()
+        this.chunkStack[this.stackTop].ds = this.realFile.u32()
+        this.chunkStack[this.stackTop].cs = this.realFile.u32()
 
-        return this.chunk_stack[this.stack_top].id;
+        return this.chunkStack[this.stackTop].id;
     }
-    end_chunk() {
-        this.real_file.seek_forward(
-            this.chunk_stack[this.stack_top].sp
-                + this.chunk_stack[this.stack_top].cs
-                - this.real_file.get_offset()
+    EndChunk() {
+        this.realFile.seek_forward(
+            this.chunkStack[this.stackTop].sp
+                + this.chunkStack[this.stackTop].cs
+                - this.realFile.get_offset()
         )
-        this.stack_top--
+        this.stackTop--
     }
-    get_current_id() {
-        return this.chunk_stack[this.stack_top].id
+    GetCurrentID() {
+        return this.chunkStack[this.stackTop].id
     }
-    get_current_ds() {
-        return this.chunk_stack[this.stack_top].ds - HEADER_SIZE
+    GetCurrentDataSize() {
+        return this.chunkStack[this.stackTop].ds - HEADER_SIZE
     }
-    get_current_offset() {
-        return this.real_file.get_offset()
-            - this.chunk_stack[this.stack_top].sp - HEADER_SIZE
+    GetCurrentOffset() {
+        return this.realFile.get_offset()
+            - this.chunkStack[this.stackTop].sp - HEADER_SIZE
     }
 }
 export class tP3DFileHandler {
     chunk_file: tChunkFile
-    load(sc: Sc, sector: number, slice: NamedArrayBufferSlice) {
+    load(level_instance: Instance, slice: NamedArrayBufferSlice) {
         const chunk_file = new tChunkFile(slice)
-        while (chunk_file.chunks_remaining()) {
-            chunk_file.begin_chunk()
-            let h: tSimpleChunkHandler = data_handlers[chunk_file.get_current_id()]
-            if (h !== undefined || h != null) h.load_object(sc, sector, chunk_file)
-            chunk_file.end_chunk()
+        while (chunk_file.ChunksRemaining()) {
+            chunk_file.BeginChunk()
+            const h: tSimpleChunkHandler = data_handlers[chunk_file.GetCurrentID()]
+            if (h !== undefined && h != null) {
+                h.Load(level_instance, chunk_file)
+                let _
+            }
+            chunk_file.EndChunk()
         }
     }
 }
