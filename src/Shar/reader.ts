@@ -1,6 +1,6 @@
 import { assert, readString } from '../util.js'
 import { NamedArrayBufferSlice } from '../DataFetcher.js'
-import { vec3 } from 'gl-matrix'
+import { mat4, vec3 } from 'gl-matrix'
 
 import { rmt } from './math.js'
 
@@ -76,8 +76,8 @@ export class Reader {
     }
 }
 
-export function read_vector(view: Reader): rmt.Vector {
-    return new rmt.Vector(view.f32(), view.f32(), view.f32())
+export function read_vector(view: Reader): rmt._Vector {
+    return new rmt._Vector(view.f32(), view.f32(), view.f32())
 }
 export function read_matrix(view: Reader): rmt.Matrix {
     return new rmt.Matrix(
@@ -89,4 +89,12 @@ export function read_matrix(view: Reader): rmt.Matrix {
 }
 export function read_vec3(view: Reader): vec3 {
     return vec3.fromValues(view.f32(), view.f32(), view.f32())
+}
+export function read_mat4(view: Reader): mat4 {
+    return mat4.fromValues(
+        view.f32(), view.f32(), view.f32(), view.f32(),
+        view.f32(), view.f32(), view.f32(), view.f32(),
+        view.f32(), view.f32(), view.f32(), view.f32(),
+        view.f32(), view.f32(), view.f32(), view.f32(),
+    )
 }

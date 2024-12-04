@@ -6,6 +6,7 @@ import { SceneContext } from '../SceneBase.js'
 import { DynaLoadListDSG, RenderFlow } from './world.js'
 import { tP3DFileHandler } from './file.js'
 import { Bug } from './debug.js'
+import { RoadManager } from './dsg.js'
 
 
 type LevelPaths_ = {
@@ -45,7 +46,7 @@ const levels_: LevelPaths_[] = [
 ]
 
 export class DLLD_ extends DynaLoadListDSG {
-    constructor(public id: string, public desc: string, public draw: boolean) {
+    constructor(public id: string = ``, public desc: string = ``, public draw: boolean = false) {
         super()
     }
 }
@@ -53,6 +54,8 @@ export class Instance {
     constructor(public instance_index: number) { }
     renderFlow_instance: RenderFlow
     // pTriggerVolumeTracker_instance: TriggerVolumeTracker
+    roadManager_instance = new RoadManager
+
     _get_instance() { instances[this.instance_index] }
     CreateSingletons() {
         // this.pTriggerVolumeTracker_instance = TriggerVolumeTracker.CreateInstance()

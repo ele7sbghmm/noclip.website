@@ -130,6 +130,268 @@ export class Bug implements SceneGfx {
 
         return [sectors, debug]
     }
+    prepareToRender(device: GfxDevice,
+        // renderInstManager: GfxRenderInstManager,
+        viewerInput: ViewerRenderInput) {
+        viewerInput.camera.setClipPlanes(0.1);
+        this.renderHelper.debugDraw.beginFrame(viewerInput.camera.projectionMatrix,
+            viewerInput.camera.viewMatrix,
+            viewerInput.backbufferHeight,
+            viewerInput.backbufferHeight);
+
+        const topTemplate = this.renderHelper.pushTemplateRenderInst();
+        // We use the same number of samplers & uniform buffers in every material
+        topTemplate.setBindingLayouts(bindingLayouts);
+
+        const renderInstManager = this.renderHelper.renderInstManager;
+        renderInstManager.setCurrentList(this.renderInstListMain);
+
+        // Not sure if this is strictly necessary but it can't hurt
+        renderInstManager.popTemplate();
+
+        // Upload uniform data to the GPU
+        this.renderHelper.prepareToRender();
+
+        // For the extra track data display, check to see if we need to toggle the nearest plane on/off
+        // this.checkCheckpointPlaneToggle(viewerInput);
+
+        const ctx = getDebugOverlayCanvas2D()
+        const clipFromWorldMatrix = viewerInput.camera.clipFromWorldMatrix
+        const cw = ctx.canvas.width
+        const ch = ctx.canvas.height
+
+        let len = null
+        let color = null
+        let thickness = 0
+        let nPoints = 0
+        let p = nArray(10, () => vec4.create())
+
+        // drawWorldSpaceLine(/* ctx */                 getDebugOverlayCanvas2D(), 
+        //                    /* clipFromWorldMatrix */ clipFromWorldMatrix, 
+        //                    /* pos */                 start,
+        //                    /* scratchVec3v */        end,
+        //                    /* color */               colorNewFromRGBA(1, 0, 0, 1), 
+        //                    /* thickness */           4)
+        /*drawWorldSpaceVector(
+            getDebugOverlayCanvas2D(), 
+            clipFromWorldMatrix, 
+            pos, 
+            BARVecToStandardVec(pnt.fwd), 
+            pnt.trackSectionLength, 
+            colorNewFromRGBA(0.0, 0.5, 0.8, 1), 
+            4
+        )*/
+
+        if (this.draw_tree) {
+            const tree = this.level_instance.GetRenderManager().pWorldScene().mpStaticTree
+            const tree_color = colorNewFromRGBA(1, 1, 0, 1)
+            const p0 = vec3.create()
+            const p1 = vec3.create()
+            assert(tree != null, `kd-tree = null xD GL`)
+            for (let i = 0; i < tree.n_nodes; i++) {
+                const node = tree.nodes[i]
+                // if (node === undefined) continue
+                switch (node.axis) {
+                    case 0: {
+                        vec3.set(p0, node.pos, 0, tree.bounds_min[2])
+                        vec3.set(p1, node.pos, 0, tree.bounds_max[2])
+                        break
+                    }
+                    case 2: {
+                        vec3.set(p0, tree.bounds_min[0], 0, node.pos)
+                        vec3.set(p1, tree.bounds_max[0], 0, node.pos)
+                        break
+                    }
+                    default: { continue }
+                }
+                drawWorldSpaceLine(ctx, clipFromWorldMatrix, p0, p1, tree_color, 1)
+            }
+        }
+        if (this.draw_loadzones) {
+            // sect.mZELS[msLevel].forEach((volume: TriggerVolume) => {
+            //     // if (this.show_load_zones) {
+            //     const zel = volume.mLocator as ZoneEventLocator
+            //     if (volume.mLocator)
+            //     switch (volume.constructor.name) {
+            //         case 'RectTriggerVolume':
+            //             this.drawTriggerRect(ctx, clipFromWorldMatrix, volume as RectTriggerVolume, Blue, thickness);
+            //             if (!zel.mInteriorLoad) { break }
+            //             volume.mRadius = 40
+            //         case 'SphereTriggerVolume':
+            //             this.drawTriggerSphere(ctx, clipFromWorldMatrix, volume, Cyan, nPoints)
+            //     }
+            // })
+        }
+        this.level_instance.GetRenderManager().pWorldRenderLayer().mLoadLists.forEach((sect: DLLD_ | null) => {
+            if (sect == null) return
+            if (sect.draw == false) return
+
+            len = null
+            p = nArray(10, () => vec4.create())
+
+            if (this.draw_paths) {
+                const color = colorNewFromRGBA(0, 0, 1)
+                p = nArray(10, () => vec4.create())
+                ctx.beginPath()
+                sect.mPathSegmentElems.forEach(path => {
+                    const [sx, sy, sz] = path.mStartPos
+                    const [ex, ey, ez] = path.mEndPos
+                    vec4.set(p[0], sx, sy, sz, 1.0)
+                    vec4.set(p[1], ex, ey, ez, 1.0)
+                    transformToClipSpace(clipFromWorldMatrix, p, 2)
+
+                    drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
+                })
+                ctx.closePath()
+                ctx.lineWidth = 1
+                ctx.strokeStyle = colorToCSS(color)
+                ctx.stroke()
+            }
+            if (this.draw_static_phys) {
+                this.drawStaticPhys(sect.mSPhysElems, ctx, clipFromWorldMatrix, this.draw_static_phys_fill)
+            }
+            if (this.draw_intersect_lines) {
+                color = White
+                thickness = 1
+
+                len = sect.mIntersectElems.length
+                let int = null
+                let indices_len = null
+                for (let i = 0; i < len; i++) {
+                    int = sect.mIntersectElems[i]
+                    indices_len = int.mTriIndices.length
+
+                    p = nArray(10, () => vec4.create())
+                    ctx.beginPath()
+                    for (let j = 0; j < indices_len; j += 3) {
+                        const a = int.mTriIndices[j + 0]
+                        const b = int.mTriIndices[j + 1]
+                        const c = int.mTriIndices[j + 2]
+                        if (a == b || a == c || b == c) continue
+
+                        const [ax, ay, az] = int.mTriPts[a]
+                        const [bx, by, bz] = int.mTriPts[b]
+                        const [cx, cy, cz] = int.mTriPts[c]
+                        vec4.set(p[0], ax, ay, az, 1.0)
+                        vec4.set(p[1], bx, by, bz, 1.0)
+                        vec4.set(p[2], cx, cy, cz, 1.0)
+                        transformToClipSpace(clipFromWorldMatrix, p, 3)
+
+                        drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
+                        drawClipSpaceLine(ctx, p[1], p[2], p[8], p[9])
+                        drawClipSpaceLine(ctx, p[2], p[0], p[8], p[9])
+                        /* export function drawClipSpaceLine(ctx: CanvasRenderingContext2D, 
+                                                             p0: ReadonlyVec4, 
+                                                             p1: ReadonlyVec4, 
+                                                             s0: vec4, 
+                                                             s1: vec4): void { */
+                        // let [p0, p1, p2, s0, s1] = [p[0], p[1], p[2], p[8], p[9]]
+                        // if (!clipLineAndDivide(s0, s1, p0, p1)) return
+                        // ctx.moveTo((s0[0] + 1) * cw / 2, ((-s0[1] + 1) * ch / 2))
+                        // ctx.lineTo((s1[0] + 1) * cw / 2, ((-s1[1] + 1) * ch / 2))
+                        // if (!clipLineAndDivide(s0, s1, p1, p2)) return
+                        // ctx.moveTo((s0[0] + 1) * cw / 2, ((-s0[1] + 1) * ch / 2))
+                        // ctx.lineTo((s1[0] + 1) * cw / 2, ((-s1[1] + 1) * ch / 2))
+                        // if (!clipLineAndDivide(s0, s1, p2, p0)) return
+                        // ctx.moveTo((s0[0] + 1) * cw / 2, ((-s0[1] + 1) * ch / 2))
+                        // ctx.lineTo((s1[0] + 1) * cw / 2, ((-s1[1] + 1) * ch / 2))
+                    }
+                    ctx.closePath()
+                    ctx.lineWidth = 1
+                    ctx.strokeStyle = colorToCSS(color)
+                    ctx.stroke()
+                }
+            }
+            if (this.draw_fences) {
+                const y = 100
+                p = nArray(10, () => vec4.create());
+                const color_a = colorNewFromRGBA(1, 0, 0, 0.1)
+
+                if (this.draw_fences_height > 0.1) {
+                    ctx.beginPath()
+                    sect.mFenceElems.forEach(fence => {
+                        const centre = vec3.create()
+                        vec3.add(centre, fence.start, fence.end)
+                        vec3.scale(centre, centre, 0.5)
+                        const half = vec3.fromValues(fence.start[0] - centre[0], 0, fence.start[2] - centre[2])
+                        const length = vec3.length(half)
+                        const norm = vec3.create()
+                        vec3.normalize(norm, half)
+                        this.renderHelper.debugDraw.drawRectSolidRU(centre, 
+                                                                    norm, 
+                                                                    Vec3UnitY, 
+                                                                    length, 
+                                                                    this.draw_fences_height, 
+                                                                    color_a)
+
+                        let [sx, sy, sz] = fence.start
+                        let [ex, ey, ez] = fence.end
+                        const h = this.draw_fences_height
+                        vec4.set(p[0], sx, -h, sz, 1.0)
+                        vec4.set(p[1], sx,  h, sz, 1.0)
+                        vec4.set(p[2], ex, -h, ez, 1.0)
+                        vec4.set(p[3], ex,  h, ez, 1.0)
+                        transformToClipSpace(clipFromWorldMatrix, p, 4)
+
+                        drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
+                        drawClipSpaceLine(ctx, p[2], p[3], p[8], p[9])
+                        drawClipSpaceLine(ctx, p[0], p[2], p[8], p[9])
+                        drawClipSpaceLine(ctx, p[1], p[3], p[8], p[9])
+
+                    })
+                    color = Red
+                    ctx.closePath()
+                    ctx.lineWidth = 1
+                    ctx.strokeStyle = colorToCSS(color)
+                    ctx.stroke()
+                } else {
+                    ctx.beginPath()
+                    sect.mFenceElems.forEach(fence => {
+                        let [sx, sy, sz] = fence.start
+                        let [ex, ey, ez] = fence.end
+
+                        vec4.set(p[0], sx, sy, sz, 1.0)
+                        vec4.set(p[1], ex, ey, ez, 1.0)
+                        transformToClipSpace(clipFromWorldMatrix, p, 2)
+
+                        drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
+                    })
+                    color = Red
+                    ctx.closePath()
+                    ctx.lineWidth = 2
+                    ctx.strokeStyle = colorToCSS(color)
+                    ctx.stroke()
+                }
+            }
+        })
+    }
+    public render(device: GfxDevice, viewerInput: ViewerRenderInput) {
+        const builder = this.renderHelper.renderGraph.newGraphBuilder();
+
+        const mainColorDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.Color0, viewerInput, this.attachmentClearDescriptor);
+        const mainDepthDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.DepthStencil, viewerInput, this.attachmentClearDescriptor);
+
+        const mainColorTargetID = builder.createRenderTargetID(mainColorDesc, 'Main Color');
+        const mainDepthTargetID = builder.createRenderTargetID(mainDepthDesc, 'Main Depth');
+        builder.pushPass((pass) => {
+            pass.setDebugName('Main');
+            pass.attachRenderTargetID(GfxrAttachmentSlot.Color0, mainColorTargetID);
+            pass.attachRenderTargetID(GfxrAttachmentSlot.DepthStencil, mainDepthTargetID);
+            pass.exec((passRenderer) => {
+                this.renderInstListMain.drawOnPassRenderer(this.renderHelper.renderCache, passRenderer);
+            });
+        });
+        this.renderHelper.debugDraw.pushPasses(builder, mainColorTargetID, mainDepthTargetID);
+
+        //TODO: snow
+
+        this.renderHelper.antialiasingSupport.pushPasses(builder, viewerInput, mainColorTargetID);
+        builder.resolveRenderTargetToExternalTexture(mainColorTargetID, viewerInput.onscreenTexture);
+
+        this.prepareToRender(device, viewerInput);
+        this.renderHelper.renderGraph.execute(builder);
+        this.renderInstListMain.reset();
+    }
     drawTriggerSphere(ctx: CanvasRenderingContext2D,
         clipFromWorldMatrix: ReadonlyMat4,
         volume: TriggerVolume,
@@ -442,267 +704,5 @@ export class Bug implements SceneGfx {
                 break
             }
         }
-    }
-    prepareToRender(device: GfxDevice,
-        // renderInstManager: GfxRenderInstManager,
-        viewerInput: ViewerRenderInput) {
-        viewerInput.camera.setClipPlanes(0.1);
-        this.renderHelper.debugDraw.beginFrame(viewerInput.camera.projectionMatrix,
-            viewerInput.camera.viewMatrix,
-            viewerInput.backbufferHeight,
-            viewerInput.backbufferHeight);
-
-        const topTemplate = this.renderHelper.pushTemplateRenderInst();
-        // We use the same number of samplers & uniform buffers in every material
-        topTemplate.setBindingLayouts(bindingLayouts);
-
-        const renderInstManager = this.renderHelper.renderInstManager;
-        renderInstManager.setCurrentList(this.renderInstListMain);
-
-        // Not sure if this is strictly necessary but it can't hurt
-        renderInstManager.popTemplate();
-
-        // Upload uniform data to the GPU
-        this.renderHelper.prepareToRender();
-
-        // For the extra track data display, check to see if we need to toggle the nearest plane on/off
-        // this.checkCheckpointPlaneToggle(viewerInput);
-
-        const ctx = getDebugOverlayCanvas2D()
-        const clipFromWorldMatrix = viewerInput.camera.clipFromWorldMatrix
-        const cw = ctx.canvas.width
-        const ch = ctx.canvas.height
-
-        let len = null
-        let color = null
-        let thickness = 0
-        let nPoints = 0
-        let p = nArray(10, () => vec4.create())
-
-        // drawWorldSpaceLine(/* ctx */                 getDebugOverlayCanvas2D(), 
-        //                    /* clipFromWorldMatrix */ clipFromWorldMatrix, 
-        //                    /* pos */                 start,
-        //                    /* scratchVec3v */        end,
-        //                    /* color */               colorNewFromRGBA(1, 0, 0, 1), 
-        //                    /* thickness */           4)
-        /*drawWorldSpaceVector(
-            getDebugOverlayCanvas2D(), 
-            clipFromWorldMatrix, 
-            pos, 
-            BARVecToStandardVec(pnt.fwd), 
-            pnt.trackSectionLength, 
-            colorNewFromRGBA(0.0, 0.5, 0.8, 1), 
-            4
-        )*/
-
-        if (this.draw_tree) {
-            const tree = this.level_instance.GetRenderManager().pWorldScene().mpStaticTree
-            const tree_color = colorNewFromRGBA(1, 1, 0, 1)
-            const p0 = vec3.create()
-            const p1 = vec3.create()
-            assert(tree != null, `kd-tree = null xD GL`)
-            for (let i = 0; i < tree.n_nodes; i++) {
-                const node = tree.nodes[i]
-                // if (node === undefined) continue
-                switch (node.axis) {
-                    case 0: {
-                        vec3.set(p0, node.pos, 0, tree.bounds_min[2])
-                        vec3.set(p1, node.pos, 0, tree.bounds_max[2])
-                        break
-                    }
-                    case 2: {
-                        vec3.set(p0, tree.bounds_min[0], 0, node.pos)
-                        vec3.set(p1, tree.bounds_max[0], 0, node.pos)
-                        break
-                    }
-                    default: { continue }
-                }
-                drawWorldSpaceLine(ctx, clipFromWorldMatrix, p0, p1, tree_color, 1)
-            }
-        }
-        if (this.draw_loadzones) {
-            // sect.mZELS[msLevel].forEach((volume: TriggerVolume) => {
-            //     // if (this.show_load_zones) {
-            //     const zel = volume.mLocator as ZoneEventLocator
-            //     if (volume.mLocator)
-            //     switch (volume.constructor.name) {
-            //         case 'RectTriggerVolume':
-            //             this.drawTriggerRect(ctx, clipFromWorldMatrix, volume as RectTriggerVolume, Blue, thickness);
-            //             if (!zel.mInteriorLoad) { break }
-            //             volume.mRadius = 40
-            //         case 'SphereTriggerVolume':
-            //             this.drawTriggerSphere(ctx, clipFromWorldMatrix, volume, Cyan, nPoints)
-            //     }
-            // })
-        }
-        this.level_instance.GetRenderManager().pWorldRenderLayer().mLoadLists.forEach((sect: DLLD_ | null) => {
-            if (sect == null) return
-            if (sect.draw == false) return
-
-            len = null
-            p = nArray(10, () => vec4.create())
-
-            if (this.draw_paths) {
-                const color = colorNewFromRGBA(0, 0, 1)
-                p = nArray(10, () => vec4.create())
-                ctx.beginPath()
-                sect.mPathSegmentElems.forEach(path => {
-                    const [sx, sy, sz] = path.mStartPos
-                    const [ex, ey, ez] = path.mEndPos
-                    vec4.set(p[0], sx, sy, sz, 1.0)
-                    vec4.set(p[1], ex, ey, ez, 1.0)
-                    transformToClipSpace(clipFromWorldMatrix, p, 2)
-
-                    drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
-                })
-                ctx.closePath()
-                ctx.lineWidth = 1
-                ctx.strokeStyle = colorToCSS(color)
-                ctx.stroke()
-            }
-            if (this.draw_static_phys) {
-                this.drawStaticPhys(sect.mSPhysElems, ctx, clipFromWorldMatrix, this.draw_static_phys_fill)
-            }
-            if (this.draw_intersect_lines) {
-                color = White
-                thickness = 1
-
-                len = sect.mIntersectElems.length
-                let int = null
-                let indices_len = null
-                for (let i = 0; i < len; i++) {
-                    int = sect.mIntersectElems[i]
-                    indices_len = int.mTriIndices.length
-
-                    p = nArray(10, () => vec4.create())
-                    ctx.beginPath()
-                    for (let j = 0; j < indices_len; j += 3) {
-                        const a = int.mTriIndices[j + 0]
-                        const b = int.mTriIndices[j + 1]
-                        const c = int.mTriIndices[j + 2]
-                        if (a == b || a == c || b == c) continue
-
-                        const [ax, ay, az] = int.mTriPts[a]
-                        const [bx, by, bz] = int.mTriPts[b]
-                        const [cx, cy, cz] = int.mTriPts[c]
-                        vec4.set(p[0], ax, ay, az, 1.0)
-                        vec4.set(p[1], bx, by, bz, 1.0)
-                        vec4.set(p[2], cx, cy, cz, 1.0)
-                        transformToClipSpace(clipFromWorldMatrix, p, 3)
-
-                        drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
-                        drawClipSpaceLine(ctx, p[1], p[2], p[8], p[9])
-                        drawClipSpaceLine(ctx, p[2], p[0], p[8], p[9])
-                        /* export function drawClipSpaceLine(ctx: CanvasRenderingContext2D, 
-                                                             p0: ReadonlyVec4, 
-                                                             p1: ReadonlyVec4, 
-                                                             s0: vec4, 
-                                                             s1: vec4): void { */
-                        // let [p0, p1, p2, s0, s1] = [p[0], p[1], p[2], p[8], p[9]]
-                        // if (!clipLineAndDivide(s0, s1, p0, p1)) return
-                        // ctx.moveTo((s0[0] + 1) * cw / 2, ((-s0[1] + 1) * ch / 2))
-                        // ctx.lineTo((s1[0] + 1) * cw / 2, ((-s1[1] + 1) * ch / 2))
-                        // if (!clipLineAndDivide(s0, s1, p1, p2)) return
-                        // ctx.moveTo((s0[0] + 1) * cw / 2, ((-s0[1] + 1) * ch / 2))
-                        // ctx.lineTo((s1[0] + 1) * cw / 2, ((-s1[1] + 1) * ch / 2))
-                        // if (!clipLineAndDivide(s0, s1, p2, p0)) return
-                        // ctx.moveTo((s0[0] + 1) * cw / 2, ((-s0[1] + 1) * ch / 2))
-                        // ctx.lineTo((s1[0] + 1) * cw / 2, ((-s1[1] + 1) * ch / 2))
-                    }
-                    ctx.closePath()
-                    ctx.lineWidth = 1
-                    ctx.strokeStyle = colorToCSS(color)
-                    ctx.stroke()
-                }
-            }
-            if (this.draw_fences) {
-                const y = 100
-                p = nArray(10, () => vec4.create());
-                const color_a = colorNewFromRGBA(1, 0, 0, 0.1)
-
-                if (this.draw_fences_height > 0.1) {
-                    ctx.beginPath()
-                    sect.mFenceElems.forEach(fence => {
-                        const centre = vec3.create()
-                        vec3.add(centre, fence.start, fence.end)
-                        vec3.scale(centre, centre, 0.5)
-                        const half = vec3.fromValues(fence.start[0] - centre[0], 0, fence.start[2] - centre[2])
-                        const length = vec3.length(half)
-                        const norm = vec3.create()
-                        vec3.normalize(norm, half)
-                        this.renderHelper.debugDraw.drawRectSolidRU(centre, 
-                                                                    norm, 
-                                                                    Vec3UnitY, 
-                                                                    length, 
-                                                                    this.draw_fences_height, 
-                                                                    color_a)
-
-                        let [sx, sy, sz] = fence.start
-                        let [ex, ey, ez] = fence.end
-                        const h = this.draw_fences_height
-                        vec4.set(p[0], sx, -h, sz, 1.0)
-                        vec4.set(p[1], sx,  h, sz, 1.0)
-                        vec4.set(p[2], ex, -h, ez, 1.0)
-                        vec4.set(p[3], ex,  h, ez, 1.0)
-                        transformToClipSpace(clipFromWorldMatrix, p, 4)
-
-                        drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
-                        drawClipSpaceLine(ctx, p[2], p[3], p[8], p[9])
-                        drawClipSpaceLine(ctx, p[0], p[2], p[8], p[9])
-                        drawClipSpaceLine(ctx, p[1], p[3], p[8], p[9])
-
-                    })
-                    color = Red
-                    ctx.closePath()
-                    ctx.lineWidth = 1
-                    ctx.strokeStyle = colorToCSS(color)
-                    ctx.stroke()
-                } else {
-                    ctx.beginPath()
-                    sect.mFenceElems.forEach(fence => {
-                        let [sx, sy, sz] = fence.start
-                        let [ex, ey, ez] = fence.end
-
-                        vec4.set(p[0], sx, sy, sz, 1.0)
-                        vec4.set(p[1], ex, ey, ez, 1.0)
-                        transformToClipSpace(clipFromWorldMatrix, p, 2)
-
-                        drawClipSpaceLine(ctx, p[0], p[1], p[8], p[9])
-                    })
-                    color = Red
-                    ctx.closePath()
-                    ctx.lineWidth = 2
-                    ctx.strokeStyle = colorToCSS(color)
-                    ctx.stroke()
-                }
-            }
-        })
-    }
-    public render(device: GfxDevice, viewerInput: ViewerRenderInput) {
-        const builder = this.renderHelper.renderGraph.newGraphBuilder();
-
-        const mainColorDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.Color0, viewerInput, this.attachmentClearDescriptor);
-        const mainDepthDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.DepthStencil, viewerInput, this.attachmentClearDescriptor);
-
-        const mainColorTargetID = builder.createRenderTargetID(mainColorDesc, 'Main Color');
-        const mainDepthTargetID = builder.createRenderTargetID(mainDepthDesc, 'Main Depth');
-        builder.pushPass((pass) => {
-            pass.setDebugName('Main');
-            pass.attachRenderTargetID(GfxrAttachmentSlot.Color0, mainColorTargetID);
-            pass.attachRenderTargetID(GfxrAttachmentSlot.DepthStencil, mainDepthTargetID);
-            pass.exec((passRenderer) => {
-                this.renderInstListMain.drawOnPassRenderer(this.renderHelper.renderCache, passRenderer);
-            });
-        });
-        this.renderHelper.debugDraw.pushPasses(builder, mainColorTargetID, mainDepthTargetID);
-
-        //TODO: snow
-
-        this.renderHelper.antialiasingSupport.pushPasses(builder, viewerInput, mainColorTargetID);
-        builder.resolveRenderTargetToExternalTexture(mainColorTargetID, viewerInput.onscreenTexture);
-
-        this.prepareToRender(device, viewerInput);
-        this.renderHelper.renderGraph.execute(builder);
-        this.renderInstListMain.reset();
     }
 }

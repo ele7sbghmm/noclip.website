@@ -43,7 +43,7 @@ export class tChunkFile {
     GetInt() { return this.realFile.i32() }
     GetShort() { return this.realFile.i16() }
     GetChar() { return this.realFile.i8() }
-    GetUint() { return this.realFile.u32() }
+    GetUInt() { return this.realFile.u32() }
     GetUShort() { return this.realFile.u16() }
     GetUChar() { return this.realFile.u8() }
     GetByte() { return this.realFile.u8() }

@@ -1,10 +1,14 @@
+import { assert } from "../util.js"
 import { mat4, vec3 } from "gl-matrix"
-import { BBoxVolume, CollisionObject, CollisionVolume, CollisionVolumeOwner, CylinderVolume, EventLocator, FenceEntityDSG, IEntityDSG, IntersectDSG, Locator, LocatorEvent, LocatorType, OBBoxVolume, PathManager, PathSegment, RectTriggerVolume, SimState, SpatialTree, SphereTriggerVolume, SphereVolume, StaticPhysDSG, TriggerLocator, TriggerVolume, WallVolume, ZoneEventLocator } from "./dsg.js"
+import { BBoxVolume, CollisionObject, CollisionVolume, CollisionVolumeOwner, CylinderVolume, EventLocator, FenceEntityDSG, IEntityDSG, IntersectDSG, Intersection, Locator, LocatorEvent, LocatorType, OBBoxVolume, PathManager, PathSegment, RectTriggerVolume, RoadManager, RoadSegment, SimState, SphereTriggerVolume, SphereVolume, StaticPhysDSG, TriggerLocator, TriggerVolume, WallVolume, ZoneEventLocator } from "./dsg.js"
 import { tChunkFile } from "./file.js"
 import { SRR2 } from "./srrchunks.js"
-import { read_vec3 } from "./reader.js"
+import { read_mat4, read_matrix, read_vec3 } from "./reader.js"
 import { Pure3D, Simulation } from "./chunkids.js"
 import { Instance } from "./scenes.js"
+import { Bounds3f } from "./rad_util.js"
+import { SpatialTree } from "./spatial.js"
+import { rmt } from "./math.js"
 
 class tSimpleChunkHandler {
     constructor(public id: number) { }
@@ -398,7 +402,7 @@ export class PathLoader extends tSimpleChunkHandler implements IWrappedLoader{
     }
     override LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
     override Load(level_instance: Instance, f: tChunkFile) {//: tLoadStatus {
-        const nPoints = f.GetUint()
+        const nPoints = f.GetUInt()
         const nSegments = nPoints - 1
 
         const pm = new PathManager//.GetInstance()
@@ -435,20 +439,20 @@ export class StaticEntityLoader extends tSimpleChunkHandler implements IWrappedL
     }
     override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null { return null}}
     /*    const pStaticEntityDSG = new StaticEntityDSG
-        pStaticEntityDSG.name = f.real_file.get_nstring()
-        const version = f.real_file.i32()
-        const HasAlpha = f.real_file.i32()
+        pStaticEntityDSG.name = f.realFile.get_nstring()
+        const version = f.GetLong()
+        const HasAlpha = f.GetLong()
         if (HasAlpha) pStaticEntityDSG.mTranslucent = true
 
-        while (f.chunks_remaining()) {
-            f.begin_chunk()
-            switch (f.get_current_id()) {
+        while (f.ChunksRemaining()) {
+            f.BeginChunk()
+            switch (f.GetCurrentID()) {
                 case Pure3D.Mesh.MESH: {
                     const pGeo = new tGeometry().LoadObject(wrl, f) // wrapper
                     pStaticEntityDSG.mpDrawstuff = pGeo // ->ProcessShaders... ->SetInternalState()
                 }
             }
-            f.end_chunk()
+            f.EndChunk()
         }
         this.mpListenerCB..mRenderManager.OnChunkLoaded(pStaticEntityDSG)
         return pStaticEntityDSG
@@ -500,34 +504,49 @@ export class TreeDSGLoader extends tSimpleChunkHandler implements IWrappedLoader
     }
     override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null {
         const ipSpatialTree = new SpatialTree
-        ipSpatialTree.n_nodes = f.realFile.i32()
-        ipSpatialTree.bounds_min = read_vec3(f.realFile)
-        ipSpatialTree.bounds_max = read_vec3(f.realFile)
+        const nNodes = f.realFile.i32()
+        const bounds: Bounds3f = new Bounds3f
+        bounds.mMin = read_vec3(f.realFile)
+        bounds.mMax = read_vec3(f.realFile)
+        ipSpatialTree.SetTo(nNodes, bounds)
 
-        while (f.ChunksRemaining()) {
+        assert(ipSpatialTree.mTreeNodes.mpData != null, ``)
+        for(let i = 0; f.ChunksRemaining(); i++) {
+            
             f.BeginChunk()
             switch (f.GetCurrentID()) {
                 case SRR2.ChunkID.CONTIGUOUS_BIN_NODE: {
-                    const sub_tree_size = f.realFile.i32()
-                    const parent_offset = f.realFile.i32()
-
+                    ipSpatialTree.mTreeNodes.mpData[i].SetSubTreeSize(f.GetLong())
+                    ipSpatialTree.mTreeNodes.mpData[i].LinkParent(f.GetLong())
                     f.BeginChunk()
                     switch (f.GetCurrentID()) {
                         case SRR2.ChunkID.SPATIAL_NODE: {
-                            const axis = f.realFile.i8()
-                            const pos = f.realFile.f32()
-                            const sentity_elems = f.realFile.i32()
-                            const sphys_elems = f.realFile.i32()
-                            const intersect_elems = f.realFile.i32()
-                            const dphys_elems = f.realFile.i32()
-                            const fence_elems = f.realFile.i32()
-                            const roadsegment_elems = f.realFile.i32()
-                            const pathsegment_elems = f.realFile.i32()
-                            const anim_elems = f.realFile.i32()
-                            ipSpatialTree.nodes.push({ axis, pos })
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mSubDivPlane.mAxis = f.GetChar()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mSubDivPlane.mPosn = f.GetFloat()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mSEntityElems.mUseSize     = f.GetLong()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mSPhysElems.mUseSize       = f.GetLong()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mIntersectElems.mUseSize   = f.GetLong()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mDPhysElems.mUseSize       = f.GetLong()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mFenceElems.mUseSize       = f.GetLong()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mRoadSegmentElems.mUseSize = f.GetLong()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mPathSegmentElems.mUseSize = f.GetLong()
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mAnimElems.mUseSize        = f.GetLong() + 1
+                            ipSpatialTree.mTreeNodes.mpData[i].mData.mAnimCollElems.mUseSize    = 1
                             f.EndChunk()
+                            if (ipSpatialTree.mTreeNodes.mpData[i].IsRoot()) {
+                                //////////////////////////////////////////////////////////////////////////
+                                // WET PAINT Do not Touch!! Talk to Devin first.
+                                // Violation leads to the Tree of Woe
+                                //////////////////////////////////////////////////////////////////////////
+                                    ipSpatialTree.mTreeNodes.mpData[i].mData.mSEntityElems.mUseSize  += 100;
+                                    ipSpatialTree.mTreeNodes.mpData[i].mData.mDPhysElems.mUseSize    += 10;
+                                    ipSpatialTree.mTreeNodes.mpData[i].mData.mAnimCollElems.mUseSize += 50;
+                                    ipSpatialTree.mTreeNodes.mpData[i].mData.mAnimElems.mUseSize     += 60;
+                                }
                             break
                         }
+                        default:
+                            break
                     }
                 }
             }
@@ -543,3 +562,193 @@ export class WorldSphereLoader extends tSimpleChunkHandler implements IWrappedLo
     }
     override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null { return null }
 }
+// <DynaPhysDSG><AnimCollisionEntityDSG><AnimEntityDSG>
+type RoadList = RoadSegment[]
+export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
+    sNumRoadSegmentsLoaded: number
+    mNumIntersectionsUsed: number
+    mIntersections: Intersection[]
+    constructor() { super(SRR2.ChunkID.ROAD) }
+    override Load(level_instance: Instance, f: tChunkFile) {
+        const name = f.realFile.get_nstring()
+        const type = f.GetUInt()
+        const rm = level_instance.roadManager_instance
+        const start = f.realFile.get_nstring()
+        const startIntersection = rm.FindIntersection_str(start)
+        const end = f.realFile.get_nstring()
+        const endIntersection = rm.FindIntersection_str(end)
+        const density = f.GetUInt()
+        const speed = f.GetUInt()
+        let segments: RoadList = []
+
+        let firstSeg = true
+        let numLanes = 0
+        if (!f.ChunksRemaining()) { assert(false, `The Road: ${name} has no segments!\n`) }
+
+        let segCount = 0
+        while (f.ChunksRemaining()) {
+            f.BeginChunk()
+
+            let tmpNumLanes = 0
+            segments = this.LoadRoadSegment(level_instance, f, tmpNumLanes)
+
+            if (firstSeg) { numLanes = tmpNumLanes }
+            else { assert(numLanes == tmpNumLanes, ``) }
+            // segments.push_back(segment)
+            segments.push(segments)
+            ++segCount
+
+            f.EndChunk()
+        }
+
+        const road = rm.GetFreeRoadMemory()
+        assert(road != null, ``)
+
+        road.SetName(name)
+        rm.AddRoad(road)
+        road.SetDestinationIntersection(endIntersection!)
+        road.SetSourceIntersection(startIntersection!)
+        road.SetNumLanes(numLanes)
+
+        const SPEED_MASK  = 0x0000_00FF
+        const DIFFIC_MASK = 0x0000_FF00
+        const SC_MASK     = 0x0001_0000
+
+        road.SetSpeed(speed & SPEED_MASK)
+        road.SetDifficulty((speed & DIFFIC_MASK) >> 8)
+        road.SetShortCut((speed & SC_MASK) ? true : false)
+        road.SetDensity(density)
+
+        startIntersection!.AddRoadOut(road)
+        endIntersection!.AddRoadIn(road)
+        road.AllocateSegments(segments.length)//segments.size())
+
+        // RoadList::iterator i;
+        let dist = 10000000000
+        let closest: RoadSegment | null = null
+        const startPoint = startIntersection!.mLocation
+
+        // for (let i = segments.begin(); i != segments.end(); i++) {
+        for (const segment of segments) {
+            const origin = vec3.create()
+            segment.GetCorner(0, origin)
+            vec3.sub(origin, origin, startPoint)
+            const segToInt = Math.pow(vec3.length(origin), 2)
+            if (segToInt < dist) {
+                closest = segment
+                dist = segToInt
+            }
+        }
+        let numAllocated = 0
+        const allocatedSegments: RoadList = []
+
+        allocatedSegments.push_back(closest)
+        ++numAllocated
+
+        let current = closest
+        while (allocatedSegments.size() < segments.size()) {
+            let found = false
+            for (let i = segments.begin(); i != segments.end(); i++) {
+                const seg = i
+                const currentTrailingLeft = vec3.create()
+                const segOrigin = vec3.create()
+
+                current.GetCornter(1, currentTrailingLeft)
+                seg.GetCorner(0, segOrigin)
+
+                if (rmt.Epsilon(currentTrailingLeft[0], segOrigin[0], 0.5)
+                 && rmt.Epsilon(currentTrailingLeft[0], segOrigin[0], 0.5)
+                 && rmt.Epsilon(currentTrailingLeft[0], segOrigin[0], 0.5)) {
+                        current = seg
+                        allocatedSegments.push_back(seg)
+                        ++numAllocated
+
+                        found = true
+                        break
+                    }
+            }
+        }
+    }
+    LoadRoadSegment(level_instance: Instance, f: tChunkFile, numLanes: number) { 
+        assert(f.GetCurrentID() == SRR2.ChunkID.ROAD_SEGMENT, ``)
+        const name = f.realFile.get_nstring()
+        const segDataName = f.realFile.get_nstring()
+
+        const hierarchy = read_matrix(f.realFile)
+        const scale = read_mat4(f.realFile)
+        const z = vec3.fromValues(0, 0, 1)
+        vec3.transformMat4(z, z, scale)
+        const scaleAlongFacing = z[2]
+
+        const rm = level_instance.roadManager_instance
+        const rsd = rm.FindRoadSegmentData(segDataName)
+        const rs = rm.GetFreeRoadSegmentMemory()
+        rs.SetName(name)
+        rs.Init(rsd, hierarchy, scaleAlongFacing)
+
+        rs.AddRoadSegment(rs)
+        numLanes = rsd.GetNumLanes()
+        level_instance.GetRenderManager().OnChunkLoaded(rs, 0/*mUserData*/, SRR2.ChunkID.ROAD_SEGMENT)
+        this.sNumRoadSegmentsLoaded++
+
+        return rs
+    }
+}
+/*export class tGeometryLoader extends tSimpleChunkHandler implements IWrappedLoader {
+    mEnableFaceNormals = false
+    mOptimize = true
+    mVertexMask = 0xffff_ffff
+    constructor() { super(Pure3D.Mesh.MESH) }
+    override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG {
+        const name = f.realFile.get_nstring()
+        const version = f.GetLong()
+        // bool bOptimized = ( version != GEOMETRY_NONOPTIMIZE_VERSION );
+        const nPrimGroup = f.GetLong()
+        const Allocate = (nPrimGroup: number) => new tGeometry(nPrimGroup)
+        const geo = Allocate(nPrimGroup)
+        geo.name = name
+        
+        let primGroupCount = 0
+
+        while (f.ChunksRemaining()) {
+            f.BeginChunk()
+            switch (f.GetCurrentID()) {
+                case Pure3D.Mesh.PRIMGROUP: {
+                    const pgLoader = new tPrimGroupLoader
+                    pgLoader.SetVertexFormatMask(this.mVertexMask)
+                    const pg: tPrimGroup = pgLoader.Load(f, null, this.mOptimize && bOptimized, false)
+                    geo.SetPrimGroup(primGroupCount, pg)
+                    ++primGroupCount
+                    break
+                }
+                case Pure3D.Mesh.BOX: {
+                    const minx = f.GetFloat()
+                    const miny = f.GetFloat()
+                    const minz = f.GetFloat()
+                    const maxx = f.GetFloat()
+                    const maxy = f.GetFloat()
+                    const maxz = f.GetFloat()
+
+                    geo.SetBoundingBox(minx, miny, minz, maxx, maxy, maxz)
+                    break
+                }
+                case Pure3D.Mesh.SPHERE: {
+                    const cx = f.GetFloat()
+                    const cy = f.GetFloat()
+                    const cz = f.GetFloat()
+                    const  r = f.GetFloat()
+                    geo.SetBoundingSphere(cx, cy, cz, r)
+                    break
+                }
+                case Pure3D.Mesh.RENDERSTATUS: {
+                    geo.SetCastsShadow(!(f.GetLong() as unknown as boolean))
+                }
+                default:
+                    break
+            }
+            f.EndChunk()
+        }
+
+        return geo
+    }
+}*/

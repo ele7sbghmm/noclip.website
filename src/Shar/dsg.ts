@@ -1,22 +1,14 @@
-import { nArray } from '../util.js'
-import { vec3, mat4 } from 'gl-matrix'
-import { AABB } from '../Geometry.js'
+import { assert, nArray } from '../util.js'
 import { Color, colorNewFromRGBA } from '../Color.js'
+import { AABB } from '../Geometry.js'
 
-type SpatialNode = { axis: number, pos: number }
+import { vec3, mat4, mat3 } from 'gl-matrix'
+import { rmt } from './math.js'
+
 const AXIS_ALIGNED_SNAPPING_FACTOR: number = 0.9999
 
-export abstract class IEntityDSG {
-    name: string
-}
-export class SpatialTree extends IEntityDSG {
-    n_nodes: number
-    bounds_min: vec3
-    bounds_max: vec3
-    nodes: SpatialNode[] = []
-
-}
-
+export class tEntity { name: string }
+export class IEntityDSG extends tEntity { }
 export class FenceEntityDSG extends IEntityDSG {
     start: vec3
     end: vec3
@@ -218,7 +210,7 @@ export class BBoxVolume extends CollisionVolume {
     constructor() { super() }
 }
 export class StaticPhysDSG extends IEntityDSG {
-    _color: Color = colorNewFromRGBA(Math.random(), Math.random(), Math.random(), 1)
+    _color: Color = colorNewFromRGBA(Math.random(), Math.random(), Math.random())
     mpSimStateObj: SimState
     mPosn: vec3
     mBBox: AABB
@@ -384,316 +376,23 @@ export class StaticEntityDSG {
     mTranslucent: boolean = false
     // mpDrawstuff: tGeometry
 }
-/*export class tGeometry extends IEntityDSG {
-    primGroup: (tPrimGroup | null)[] = []
-    box: { low: vec3, high: vec3 }
-    sphere: { centre: vec3, radius: number }
-    constructor(nPG: number) {
-        super()
-        this.primGroup = Array.from({ length: nPG }, () => null)
-    }
-    SetBoundingSphere(centerx: number, centery: number, centerz: number, radius: number) {
-        this.sphere.centre = vec3.fromValues(centerx, centery, centerz)
-        this.sphere.radius = radius
-    }
-    SetBoundingBox(x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, ) {
-        this.box.low  = vec3.fromValues(x1, y1, z1)
-        this.box.high = vec3.fromValues(x2, y2, z2)
-    }
-}
-class tPrimGroup { }
-class tPrimGroupOptimised {
-    constructor(i: number) { }
-    SetShader = (i: any) => { }
-    SetPrimType = (i: any) => { }
-    SetVertexFormat = (i: number) => { }
-}
-class tPrimGroupSkinnedOptimised {
-    constructor(i: number) { }
-    SetShader = (i: any) => { }
-    SetPrimType = (i: any) => { }
-    SetVertexFormat = (i: number) => { }
-}
-class pddiPrimBufferStream { }
-const PddiNumColourSets = (i: number) => { }
-export class tPrimGroupLoader {
-    mVertexFormat: number
-    mVertexFormatMask: number
-    mVertexCount: number
-    mShader: any
-    mPrimType: any
-    Load(f: tChunkFile, bones: mat4, optimize: boolean, deform: boolean): tPrimGroup | null {
-        // pddiExtHardwareSkinning* hwSkin = p3d::context->GetHardwareSkinning();
-        // if (!ParseHeader) return null
-        // if (bones && !hwSkin) { ... }
-        // else if (!optimise) { ... }
-        const tmpPositions = vec3.create()
-        // if deform { ... }
-        const version = undefined
-        const param = undefined
-        const bufferSize = undefined
-        let primGroup: tPrimGroupOptimised | tPrimGroupSkinnedOptimised
-        if (bones) { primGroup = new tPrimGroupSkinnedOptimised(this.mVertexCount)}
-        else { primGroup = new tPrimGroupOptimised(this.mVertexCount) }
-        // let primBuffer: pddiPrimBuffer
-        let primBufferInitialized = false
-        primGroup.SetShader(this.mShader)
-        primGroup.SetPrimType(this.mPrimType)
-        primGroup.SetVertexFormat(this.mVertexFormatMask)
-
-        const nColourChannels = PddiNumColourSets(this.mVertexFormat)
-        const nUVChannel = this.mVertexFormat & 0xf
-        let stream: pddiPrimBufferStream | null = null
-        let memoryImaged = false
-
-        while (f.chunks_remaining()) {
-            f.begin_chunk()
-            switch (f.get_current_id()) {
-                case Pure3D.Mesh.MEMORYIMAGEVERTEXLIST: {
-                    memoryImaged = true
-                    primBufferInitialized = true
-                    // pddiPrimBufferDesc desc(mPrimType, mVertexFormat, mVertexCount, mIndexCount);
-                    desc.SetMemoryImaged(true)
-                    desc.SetMatrixCount(this.mMatrixCount)
-                    // primBuffer  = p3d::device->NewPrimBuffer(&desc)
-                    primGroup.SetBuffer(primBuffer)
-                    break
-                }
-                case Pure3D.Mesh.POSITIONLIST:
-                case Pure3D.Mesh.NORMALLIST:
-                case Pure3D.Mesh.PACKEDNORMALLIST:
-                case Pure3D.Mesh.COLOURLIST:
-                case Pure3D.Mesh.UVLIST: {
-                    if (!primBufferInitialized) {
-                        primBufferInitialized = true
-                        // pddiPrimBufferDesc desc(mPrimType, mVertexFormat, mVertexCount, mIndexCount);
-                        decodeString.SetMatrixCount(this.mMatrixCount)
-                        // primBuffer  = p3d::device->NewPrimBuffer(&desc)
-                        primGroup.SetBuffer(primBuffer)
-                        break
-                    }
-                }
-                default:
-                    break
-            }
-            if (primBufferInitialized) { 
-                assert(false, `stream = primBuffer.Lock() :(`)
-                // stream = primBuffer.Lock()
-            }
-            switch (f.get_current_id()) {
-                case Pure3D.Mesh.POSITIONLIST: {
-                    const count = f.real_file.i32()
-                    for (let a = 0; a < count; a++) {
-                        const v = vec3.fromValues(f.real_file.f32(), f.real_file.f32(), f.real_file.f32())
-                        // stream.Coord(v[0], v[1], v[2])
-                        // if (tmpPositoins) { tmpPositions[a] = v}
-                    }
-                    break
-                }
-                case Pure3D.Mesh.NORMALLIST: {
-                    if (!(this.mVertexFormat & PDDI_V_NORMAL)) break
-                    const count = f.real_file.i32()
-                    for (let a = 0; a < count; a++) {
-                        const v = vec3.fromValues(f.real_file.f32(), f.real_file.f32(), f.real_file.f32())
-                        stream!.Normal(v[0], v[1], v[2])
-                        stream!.Next()
-                    }
-                    break
-                }
-                case Pure3D.Mesh.COLOURLIST: {
-                    if (!(this.mVertexCount & PDDI_V_COLOUR)) break
-                    const count = f.real_file.i32()
-                    for (let a = 0; a < count; a++) {
-                        const v = vec3.fromValues(f.real_file.f32(), f.real_file.f32(), f.real_file.f32())
-                        stream!.Colour(v[0], v[1], v[2])
-                        stream!.Next()
-                    }
-                    break
-                }
-                case Pure3D.Mesh.MULTICOLOURLIST: {
-                    if (!(this.mVertexFormat & PDDI_V_COLOUR2)) break
-                    const count = f.real_file.i32()
-                    const channel = f.real_file.i32()
-                    if (channel >= this.nColourChannels) break
-                    assert(count == this.mVertexCount)
-                    for (let a = 0; a < count; a++) {
-                        const c = f.real_file.f32()
-                        stream!.Colour(c, channel)
-                        stream!.Next()
-                    }
-                    break
-                }
-                case Pure3D.Mesh.UVLIST: {
-                    const count = f.real_file.i32()
-                    const channel = f.real_file.i32()
-                    if (channel >= nUVChannel) break
-                    assert(count == this.mVertexCount)
-                    for (let a = 0; a < count; a++) { 
-                        const u = f.real_file.f32()
-                        const v = f.real_file.f32()
-                        stream!.UV(u, v, channel)
-                        stream!.Next()
-                    }
-                    break
-                }
-                case Pure3D.Mesh.INDEXLIST: {
-                    const count = f.real_file.i32()
-                    const tempIndexList = nArray(count, () => 0)
-                    for (let a = 0; a < count; a++) {
-                        tempIndexList[a] = f.real_file.i32()
-                    }
-                    primBuffer.SetIndices(tempIndexList, count)
-                    p3d.FreeTemp(tempIndexList)
-                    break
-                }
-                case Pure3D.Mesh.WEIGHTLIST: {
-                    const count = f.real_file.i32()
-                    // let weight: number[] = []
-                    for (let a = 0; a < count; a++) {
-                        const weight = vec3.fromValues(f.real_file.f32(), f.real_file.f32(), f.real_file.f32())
-                        stream.SkinWeights(weight[0], weight[1], weight[2])
-                        stream.Next()
-                    }
-                    break
-                }
-                case Pure3D.Mesh.MATRIXLIST: {
-                    const count = f.real_file.i32()
-                    for (let a = 0; a < count; a++) {
-                        const index = [f.real_file.i8(), f.real_file.i8(), f.real_file.i8(), f.real_file.i8()]
-                        stream.SkinIndices(index[3], index[2], index[1], index[0])
-                        stream.Next()
-                    }
-                    break
-                }
-                case Pure3D.Mesh.MATRIXPALETTE: {
-                    const count = f.real_file.i32()
-                    const skin = primGroup as tPrimGroupSkinnedOptimised
-                    skin.nMatrices = count
-                    skin.matrixPalette = nArray(count, () => mat4.create())
-                    for (let a = 0; a < count; a++) {
-                        const index = f.real_file.i32()
-                        skin.matrixPalette[a] = bones[index]
-                    }
-                    break
-                }
-                case Pure3D.Mesh.INSTANCEINFO: {
-                    primGroup.instanceCount = f.real_file.i32()
-                    const vCount = f.real_file.i32()
-                    const iCount = f.real_file.i32()
-                    primGroup.instanceSize = (this.mIndexCount > 0) ? iCount : vCount
-                    break
-                }
-                case Pure3D.Mesh.MEMORYIMAGEVERTEXLIST: {
-                    assert(false, `Pure3D.Mesh.MEMORYIMAGEVERTEXLIST :(`)
-                    // memoryImage = true
-                    // const version = f.real_file.i32()
-                    // const param = f.real_file.i32()
-                    // const bufferSize = f.real_file.i32()
-                    // primBufferInitialized.SetMemImageParam(f.get_current_id(), param)
-                    // let ptr = primBuffer.LockMemImage(bufferSize)
-                    // ptr = nArray(bufferSize, () => f.real_file.i8())
-                    // primBufferInitialized.UnlockMemImage()
-                    // break
-                }
-                case Pure3D.Mesh.MEMORYIMAGEVERTEXDESCRIPTIONLIST: {
-                    assert(false, `Pure3D.Mesh.MEMORYIMAGEVERTEXDESCRIPTIONLIST :(`)
-                    // memoryImaged = true
-                    // const version = f.real_file.i32()
-                    // const param = f.real_file.i32()
-                    // const bufferSize = f.real_file.i32()
-                    // primBuffer.SetMemImageParam(f.get_current_id(), param)
-                    // let prt = primBuffer.LockMemImage(bufferSize);
-                    // ptr = nArray(bufferSize, () => f.real_file.i8())
-                    // primBufferInitialized.UnlockMemImage()
-                    // break
-                }
-                case Pure3D.Mesh.MEMORYIMAGEINDEXLIST: {
-                    assert(false, `Pure3D.Mesh.MEMORYIMAGEINDEXLIST :(`)
-                    // memoryImage = true
-                    // const version = f.real_file.i32()
-                    // const param = f.real_file.i32()
-                    // const bufferSize = f.real_file.i32()
-                    // primBuffer.SetMemImageParam(f.get_current_id(), param)
-                    // let index = primBuffer.LockIndexBuffer(bufferSize);
-                    // index = nArray(bufferSize, () => f.real_file.i8())
-                    // primBufferInitialized.UnlockIndexBuffer()
-                    // break
-                }
-                default:
-                    break
-            }
-            if (stream) {
-                primBufferInitialized.Unlock(stream)
-                stream = null
-            }
-            f.end_chunk()
-        }
-        if (primGroup && tmpPositions)
-            primGroup.tempPositions = tmpPositions
-        primBufferInitialized.Finalize()
-
-        return primGroup
-    }
-    SetVertexFormatMask(m: number) { this.mVertexFormatMask = m }
-}
-export class tGeometryLoader extends tSimpleChunkHandler implements IEntityDSG {
-    mVertexMask: number = 0xffff_ffff
-    mEnableFaceNormals: boolean = false
-    LoadObject(f: tChunkFile): IEntityDSG {
-        const name = f.real_file.get_nstring()
-        const version = f.real_file.i32()
-        // bool bOptimized = ( version != GEOMETRY_NONOPTIMIZE_VERSION );
-        const nPrimGroup = f.real_file.i32()
-        const Allocate = (nPrimGroup: number) => new tGeometry(nPrimGroup)
-        const geo = Allocate(nPrimGroup)
-        geo.name = name
-        
-        let primGroupCount = 0
-
-        while (f.chunks_remaining()) {
-            f.begin_chunk()
-            switch (f.get_current_id()) {
-                case Pure3D.Mesh.PRIMGROUP: {
-                    const pgLoader = new tPrimGroupLoader
-                    pgLoader.SetVertexFormatMask(mVertexMask)
-                    const pg: tPrimGroup = pgLoader.Load(f, NULL, mOptimize && bOptimized, false)
-                    geo.SetPrimGroup(primGroupCount, pg)
-                    ++primGroupCount
-                    break
-                }
-                case Pure3D.Mesh.BOX: {
-                    const minx = f.real_file.f32()
-                    const miny = f.real_file.f32()
-                    const minz = f.real_file.f32()
-                    const maxx = f.real_file.f32()
-                    const maxy = f.real_file.f32()
-                    const maxz = f.real_file.f32()
-
-                    geo.SetBoundingBox(minx, miny, minz, maxx, maxy, maxz)
-                    break
-                }
-                case Pure3D.Mesh.SPHERE: {
-                    const cx = f.real_file.f32()
-                    const cy = f.real_file.f32()
-                    const cz = f.real_file.f32()
-                    const  r = f.real_file.f32()
-                    geo.SetBoundingSphere(cx, cy, cz, r)
-                    break
-                }
-                case Pure3D.Mesh.RENDERSTATUS: {
-                    geo.SetCastsShadow(!(f.real_file.i32() as unknown as boolean))
-                }
-                default:
-                    break
-            }
-            f.end_chunk()
-        }
-
-        return geo
-    }
-}
-*/
-
+// export class tGeometry extends IEntityDSG {
+//     primGroup: (tPrimGroup | null)[] = []
+//     box: { low: vec3, high: vec3 }
+//     sphere: { centre: vec3, radius: number }
+//     constructor(nPG: number) {
+//         super()
+//         this.primGroup = Array.from({ length: nPG }, () => null)
+//     }
+//     SetBoundingSphere(centerx: number, centery: number, centerz: number, radius: number) {
+//         this.sphere.centre = vec3.fromValues(centerx, centery, centerz)
+//         this.sphere.radius = radius
+//     }
+//     SetBoundingBox(x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, ) {
+//         this.box.low  = vec3.fromValues(x1, y1, z1)
+//         this.box.high = vec3.fromValues(x2, y2, z2)
+//     }
+// }
 export class PathManager {
     static MAX_PATHS = 125
     static mInstance: PathManager | null = null
@@ -744,6 +443,218 @@ class Path {
     }
     SetIsClosed(isClosed: boolean) {
         this.mIsClosed = isClosed
+    }
+}
+export class DynaPhysDSG { }
+export class AnimCollisionEntityDSG { }
+export class AnimEntityDSG { }
+export class WorldSphereDSG { }
+export class RoadManager {
+    mNumRoadsUsed           = 0
+    mNumRoadSegmentsUsed    = 0
+    mNumIntersectionsUsed   = 0
+    mNumRoadSegmentDataUsed = 0
+    mNumRoads               = 150
+    mNumRoadSegments        = 1200
+    mNumIntersections       = 60
+    mNumRoadSegmentData     = 1200
+    mRoads           = nArray( 150, () => new Road)
+    mRoadSegment     = nArray(1200, () => new RoadSegment)
+    mIntersections   = nArray(  60, () => new Intersection)
+    mRoadSegmentData = nArray(1200, () => new RoadSegmentData)
+    GetInstance() { return this }
+    AddRoad = (pRoad: Road) => {
+        assert(this.mNumRoadsUsed < this.mNumRoads, ``)
+        assert(pRoad == this.mRoads[this.mNumRoadsUsed], ``)
+        ++this.mNumRoadsUsed
+    }
+    FindIntersection_str(name: string): Intersection | null {
+        for (let i = 0; i < this.mNumIntersectionsUsed; ++i) {
+            if (this.mIntersections[i].name == name) {
+                return this.mIntersections[i]
+            }
+        }
+        return null
+    }
+    FindIntersection_vec3(point: vec3): Intersection | null {
+        for (let i = 0; i < this.mNumIntersectionsUsed; ++i) {
+            if (this.mIntersections[i].IsPointInIntersection(point)) {
+                return this.mIntersections[i]
+            }
+        }
+        return null
+    }
+    FindIntersection_number(iIndex: number) { return this.mIntersections[iIndex] }
+    GetFreeRoadMemory() {
+        if (0 <= this.mNumRoadsUsed && this.mNumRoadsUsed < this.mNumRoads) {
+            return this.mRoads[this.mNumRoadsUsed]
+        }
+        return null
+    }
+}
+export class Road {
+    name: string = ``
+    mnLanes: number
+    mSpeed: number
+    mDifficulty: number
+    mIsShortCut: boolean
+    mDensity: number
+    mLength: number
+    mpDestinationIntersection: Intersection
+    mpSourceIntersection: Intersection
+    numSegments: number
+    mppRoadSegmentArray: (RoadSegment | null)[]
+    mnRoadSegments: (RoadSegment | null)[]
+    mnMaxRoadSegments: number
+    SetName = (name: string) => { this.name = name }
+    SetSpeed = (speed: number) => { this.mSpeed = speed }
+    SetDifficulty = (diff: number) => { this.mDifficulty = diff }
+    SetShortCut = (is: boolean) => { this.mIsShortCut = is }
+    SetDensity = (density: number) => { this.mDensity = density }
+    SetRoadLength = (len: number) => { this.mLength = len }
+    SetNumLanes = (count: number) => { this.mnLanes = count}
+    SetDestinationIntersection = (pIntersection: Intersection) => {
+        this.mpDestinationIntersection = pIntersection }
+    SetSourceIntersection = (pIntersection: Intersection) => {
+        this.mpSourceIntersection = pIntersection }
+    AllocateSegments = (numSegments: number) => {
+        assert(this.numSegments > 0, ``)
+        assert(null == this.mppRoadSegmentArray[0], ``)
+        assert(null == this.mnRoadSegments[0], ``)
+        this.mnMaxRoadSegments = numSegments
+        this.mppRoadSegmentArray = nArray(this.mnMaxRoadSegments, () => null)//new RoadSegment)
+        // for (let i = 0; i < this.mnMaxRoadSegments; i++) {
+        //     this.mppRoadSegmentArray[i] = 0
+        // }
+    }
+}
+export class RoadSegment {
+    mCorners: [vec3, vec3, vec3, vec3]
+    mEdgeNormals: [vec3, vec3, vec3, vec3]
+    mNormal: vec3
+    mRoad: Road | null = null
+    mSegmentIndex = 0
+    mfLaneWidth = 0
+    mfRadius = 0
+    mfAngle = 0
+    mSphere: rmt.Sphere
+    mfSegmentLength: number
+    Init(rsd: RoadSegmentData, hierarchy: mat4, scaleAlongFacing: number) {
+        for (let i = 0; i < 4; i++) {
+            this.mCorners[i] = rsd.GetCorner(i)
+            this.mEdgeNormals[i] = rsd.GetEdgeNormal(i)
+        }
+        const _tmp = vec3.create()
+        vec3.add(_tmp, this.mCorners[0], this.mCorners[3])
+        vec3.scale(_tmp, _tmp, 0.5)
+        const fWidth = vec3.length(_tmp)
+        this.mfLaneWidth = fWidth / rsd.GetNumLanes()
+        let fCosTheta = vec3.dot(this.mEdgeNormals[0], this.mEdgeNormals[1])
+        if (fCosTheta < 0) fCosTheta *= -1
+        if (fCosTheta < 0.001) fCosTheta = 0
+        vec3.sub(_tmp, this.mCorners[0], this.mCorners[1])
+        const fInteriorEdgeLength = vec3.length(_tmp)
+        vec3.sub(_tmp, this.mCorners[2], this.mCorners[3])
+        const fExteriorEdgeLength = vec3.length(_tmp)
+
+        if (fCosTheta) {
+            const length = (fInteriorEdgeLength < fExteriorEdgeLength)
+                ? fInteriorEdgeLength / 2 : fExteriorEdgeLength / 2
+            this.mfRadius = length / fCosTheta
+            this.mfAngle = (Math.PI / 2) - Math.acos(fCosTheta)
+        } else {
+            this.mfRadius = 0
+            this.mfAngle = 0
+        }
+        const vector = vec3.create()
+        for (let i = 0; i < 4; i++) {
+            vec3.copy(vector, rsd.GetCorner(i))
+            vector[2] *= scaleAlongFacing
+            vec3.transformMat4(vector, vector, hierarchy)
+            vec3.copy(this.mCorners[i], vector)
+            
+            vec3.copy(vector, rsd.GetEdgeNormal(i))
+            vec3.transformMat3(vector, vector, mat3.fromMat4(mat3.create(), hierarchy))
+            vec3.copy(this.mEdgeNormals[i], vector)
+        }
+        vec3.copy(vector, rsd.GetSegmentNormal())
+        vec3.transformMat3(vector, vector, mat3.fromMat4(mat3.create(), hierarchy))
+        vec3.copy(this.mNormal, vector)
+
+        const segStart = vec3.create()
+        vec3.add(segStart, this.mCorners[0], this.mCorners[3])
+        vec3.scale(segStart, segStart, 0.5)
+        const segEnd = vec3.create()
+        vec3.add(segEnd, this.mCorners[0], this.mCorners[3])
+        vec3.scale(segEnd, segEnd, 0.5)
+        this.mfSegmentLength = vec3.dist(segEnd, segStart)
+
+        const box = this.GetBoundingBox()
+        const vectorBetween = vec3.create()
+        vec3.sub(vectorBetween, box.high, box.low)
+        vec3.scale(vectorBetween, vectorBetween, 0.5)
+        vec3.add(this.mSphere.centre, box.low, vectorBetween)
+        this.mSphere.radius = vec3.length(vectorBetween)
+    }
+    GetBoundingBox() {
+        const box = new rmt.Box3D
+        const vertex = vec3.create()
+        for (let i = 0; i < 4; i++) {
+            vec3.copy(vertex, this.mCorners[i])
+            if (i == 0) {
+                vec3.copy(box.low, vertex)
+                vec3.copy(box.high, vertex)
+            } else {
+                if (box.low[0] > vertex[0]) box.low[0] = vertex[0]
+                if (box.low[1] > vertex[1]) box.low[1] = vertex[1]
+                if (box.low[2] > vertex[2]) box.low[2] = vertex[2]
+                if (box.high[0] < vertex[0]) box.high[0] = vertex[0]
+                if (box.high[1] < vertex[1]) box.high[1] = vertex[1]
+                if (box.high[2] < vertex[2]) box.high[2] = vertex[2]
+            }
+        }
+        return new rmt.Box3D()
+    }
+    GetCorner(index: number) {
+        return this.mCorners[index]
+    }
+    GetRoad() {
+        return this.mRoad
+    }
+}
+export class RoadSegmentData {
+    mnLanes: number
+    mNormal: vec3
+    mCorners: [vec3, vec3, vec3, vec3]
+    mEdgeNormals: [vec3, vec3, vec3, vec3]
+    GetEdgeNormal(index: number) { return this.mEdgeNormals[index] }
+    GetCorner(index: number) { return this.mCorners[index] }
+    GetNumLanes() { return this.mnLanes }
+    GetSegmentNormal() { return this.mNormal }
+}
+export class Intersection {
+    name: string
+    mLocation: vec3
+    mfRadius: number
+    mnRoadsIn: number
+    mnRoadsOut: number
+    mRoadListIn: Road[]
+    mRoadListOut: Road[]
+    AddRoadIn(pRoad: Road) {
+        this.mRoadListIn[this.mnRoadsIn] = pRoad
+        this.mnRoadsIn++
+    }
+    AddRoadOut(pRoad: Road) {
+        this.mRoadListOut[this.mnRoadsOut] = pRoad
+        this.mnRoadsOut++
+    }
+    IsPointInIntersection(point: vec3) {
+        return vec3.length(
+            vec3.fromValues(
+                point[0] - this.mLocation[0], 
+                0, 
+                point[2] - this.mLocation[2]
+        )) <= this.mfRadius
     }
 }
 export enum CollisionVolumeTypeEnum {

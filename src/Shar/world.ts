@@ -1,7 +1,8 @@
 import { assert, nArray } from '../util.js'
-import { IEntityDSG, FenceEntityDSG, SpatialTree, IntersectDSG, StaticPhysDSG, TriggerVolume, PathSegment, StaticEntityDSG } from './dsg.js'
+import { IEntityDSG, FenceEntityDSG, IntersectDSG, StaticPhysDSG, TriggerVolume, PathSegment, StaticEntityDSG, WorldSphereDSG, AnimCollisionEntityDSG, AnimEntityDSG, DynaPhysDSG, RoadSegment } from './dsg.js'
 import { StaticEntityLoader, StaticPhysLoader, TreeDSGLoader, FenceLoader, IntersectLoader, LocatorLoader, WorldSphereLoader, PathLoader, IWrappedLoader } from './loaders.js'
 import { DLLD_ } from './scenes.js'
+import { SpatialTree } from './spatial.js'
 import { SRR2 } from './srrchunks.js'
 
 const MAX_PLAYERS: number = 4
@@ -9,7 +10,7 @@ const MAX_PLAYERS: number = 4
 export class WorldRenderLayer {
     mpWorldScene = new WorldScene
     // worldSpheres: WorldSphereDSG[]
-    mLoadLists: DLLD_[] = nArray(30, () => new DLLD_(``, ``, false))
+    mLoadLists = nArray(30, () => new DLLD_)
     mCurLoadIndex: number
     pWorldScene() { return this.mpWorldScene }
     AddGuts(ipEDSG: IEntityDSG) {
@@ -29,6 +30,7 @@ export class WorldRenderLayer {
             case `PathSegment`:            this.mLoadLists[this.mCurLoadIndex].mPathSegmentElems.push(ipEDSG as PathSegment); break
         }
     }
+
 }
 class WorldScene {
     mpStaticTree: SpatialTree | null = null
@@ -36,16 +38,16 @@ class WorldScene {
 }
 export class DynaLoadListDSG {
     // mGiveItAFuckinName: string
-    // mWorldSphereElems: WorldSphereDSG[] = []
+    mWorldSphereElems: WorldSphereDSG[] = []
     mSEntityElems:     StaticEntityDSG[] = []
     mSPhysElems:       StaticPhysDSG[] = []
     mIntersectElems:   IntersectDSG[] = []
-    // mDPhysElems:       DynaPhysDSG[] = []
+    mDPhysElems:       DynaPhysDSG[] = []
     mFenceElems:       FenceEntityDSG[] = []
-    // mAnimCollElems:    AnimCollisionEntityDSG[] = []
-    // mAnimElems:        AnimEntityDSG[] = []
+    mAnimCollElems:    AnimCollisionEntityDSG[] = []
+    mAnimElems:        AnimEntityDSG[] = []
     mTrigVolElems:     TriggerVolume[] = []
-    // mRoadSegmentElems: RoadSegment[] = []
+    mRoadSegmentElems: RoadSegment[] = []
     mPathSegmentElems: PathSegment[] = []
 }
 class TriggerVolumeTracker {
