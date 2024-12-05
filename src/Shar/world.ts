@@ -1,6 +1,6 @@
 import { assert, nArray } from '../util.js'
 import { IEntityDSG, FenceEntityDSG, IntersectDSG, StaticPhysDSG, TriggerVolume, PathSegment, StaticEntityDSG, WorldSphereDSG, AnimCollisionEntityDSG, AnimEntityDSG, DynaPhysDSG, RoadSegment } from './dsg.js'
-import { StaticEntityLoader, StaticPhysLoader, TreeDSGLoader, FenceLoader, IntersectLoader, LocatorLoader, WorldSphereLoader, PathLoader, IWrappedLoader } from './loaders.js'
+import { StaticEntityLoader, StaticPhysLoader, TreeDSGLoader, FenceLoader, IntersectLoader, LocatorLoader, WorldSphereLoader, PathLoader, IWrappedLoader, RoadLoader, AnimCollLoader, AnimDSGLoader, AnimDynaPhysLoader, AnimDynaPhysWrapperLoader, BillboardWrappedLoader, BreakableObjectLoader, DynaPhysLoader, InstParticleSystemLoader, InstStatEntityLoader, InstStatPhysLoader, LensFlareLoader } from './loaders.js'
 import { DLLD_ } from './scenes.js'
 import { SpatialTree } from './spatial.js'
 import { SRR2 } from './srrchunks.js'
@@ -140,21 +140,21 @@ export class AllWrappers {
         this.mpLoaders[AllWrappers.msTreeDSG]            = new TreeDSGLoader
         this.mpLoaders[AllWrappers.msFenceEntity]        = new FenceLoader
         this.mpLoaders[AllWrappers.msIntersectDSG]       = new IntersectLoader
-        this.mpLoaders[AllWrappers.msAnimCollEntity]     = null//new AnimCollLoader
-        this.mpLoaders[AllWrappers.msAnimEntity]         = null//new AnimDSGLoader
-        this.mpLoaders[AllWrappers.msDynaPhys]           = null//new DynaPhysLoader
-        this.mpLoaders[AllWrappers.msInstStatEntity]     = null//new InstStatEntityLoader
-        this.mpLoaders[AllWrappers.msInstStatPhys]       = null//new InstStatPhysLoader
+        this.mpLoaders[AllWrappers.msAnimCollEntity]     = new AnimCollLoader
+        this.mpLoaders[AllWrappers.msAnimEntity]         = new AnimDSGLoader
+        this.mpLoaders[AllWrappers.msDynaPhys]           = new DynaPhysLoader
+        this.mpLoaders[AllWrappers.msInstStatEntity]     = new InstStatEntityLoader
+        this.mpLoaders[AllWrappers.msInstStatPhys]       = new InstStatPhysLoader
         this.mpLoaders[AllWrappers.msLocator]            = new LocatorLoader
         this.mpLoaders[AllWrappers.msWorldSphere]        = new WorldSphereLoader
-        this.mpLoaders[AllWrappers.msRoadSegment]        = null//new RoadLoader
+        this.mpLoaders[AllWrappers.msRoadSegment]        = new RoadLoader
         this.mpLoaders[AllWrappers.msPathSegment]        = new PathLoader
-        this.mpLoaders[AllWrappers.msBillboard]          = null//new BillboardWrappedLoader
-        this.mpLoaders[AllWrappers.msInstParticleSystem] = null//new InstParticleSystemLoader
-        this.mpLoaders[AllWrappers.msBreakableObject]    = null//new BreakableObjectLoader
-        this.mpLoaders[AllWrappers.msLensFlare]          = null//new LensFlareLoader
-        this.mpLoaders[AllWrappers.msAnimDynaPhys]       = null//new AnimDynaPhysLoader
-        this.mpLoaders[AllWrappers.msAnimDynaPhysWrapper]= null//new AnimDynaPhysWrapperLoader
+        this.mpLoaders[AllWrappers.msBillboard]          = new BillboardWrappedLoader
+        this.mpLoaders[AllWrappers.msInstParticleSystem] = new InstParticleSystemLoader
+        this.mpLoaders[AllWrappers.msBreakableObject]    = new BreakableObjectLoader
+        this.mpLoaders[AllWrappers.msLensFlare]          = new LensFlareLoader
+        this.mpLoaders[AllWrappers.msAnimDynaPhys]       = new AnimDynaPhysLoader
+        this.mpLoaders[AllWrappers.msAnimDynaPhysWrapper]= new AnimDynaPhysWrapperLoader
     }
 }
 export namespace RenderEnums {

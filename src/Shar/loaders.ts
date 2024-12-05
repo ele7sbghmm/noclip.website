@@ -3,11 +3,11 @@ import { mat4, vec3 } from "gl-matrix"
 import { BBoxVolume, CollisionObject, CollisionVolume, CollisionVolumeOwner, CylinderVolume, EventLocator, FenceEntityDSG, IEntityDSG, IntersectDSG, Intersection, Locator, LocatorEvent, LocatorType, OBBoxVolume, PathManager, PathSegment, RectTriggerVolume, RoadManager, RoadSegment, SimState, SphereTriggerVolume, SphereVolume, StaticPhysDSG, TriggerLocator, TriggerVolume, WallVolume, ZoneEventLocator } from "./dsg.js"
 import { tChunkFile } from "./file.js"
 import { SRR2 } from "./srrchunks.js"
-import { read_mat4, read_matrix, read_vec3 } from "./reader.js"
+import { read_mat4, read_vec3 } from "./reader.js"
 import { Pure3D, Simulation } from "./chunkids.js"
 import { Instance } from "./scenes.js"
 import { Bounds3f } from "./rad_util.js"
-import { SpatialTree } from "./spatial.js"
+import { ContiguousBinNode, SpatialTree } from "./spatial.js"
 import { rmt } from "./math.js"
 
 class tSimpleChunkHandler {
@@ -590,12 +590,12 @@ export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
             f.BeginChunk()
 
             let tmpNumLanes = 0
-            segments = this.LoadRoadSegment(level_instance, f, tmpNumLanes)
+            const segment = this.LoadRoadSegment(level_instance, f, tmpNumLanes)
 
             if (firstSeg) { numLanes = tmpNumLanes }
             else { assert(numLanes == tmpNumLanes, ``) }
             // segments.push_back(segment)
-            segments.push(segments)
+            segments.push(segment!)
             ++segCount
 
             f.EndChunk()
@@ -630,8 +630,7 @@ export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
 
         // for (let i = segments.begin(); i != segments.end(); i++) {
         for (const segment of segments) {
-            const origin = vec3.create()
-            segment.GetCorner(0, origin)
+            const origin = segment.GetCorner(0)
             vec3.sub(origin, origin, startPoint)
             const segToInt = Math.pow(vec3.length(origin), 2)
             if (segToInt < dist) {
@@ -642,25 +641,24 @@ export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
         let numAllocated = 0
         const allocatedSegments: RoadList = []
 
-        allocatedSegments.push_back(closest)
+        allocatedSegments.push(closest!)
         ++numAllocated
 
         let current = closest
-        while (allocatedSegments.size() < segments.size()) {
+        // while (allocatedSegments.size() < segments.size()) {
+        while (allocatedSegments.length < segments.length) {
             let found = false
-            for (let i = segments.begin(); i != segments.end(); i++) {
-                const seg = i
-                const currentTrailingLeft = vec3.create()
-                const segOrigin = vec3.create()
+            // for (let i = segments.begin(); i != segments.end(); i++) {
+            for (const seg of segments) {
 
-                current.GetCornter(1, currentTrailingLeft)
-                seg.GetCorner(0, segOrigin)
+                const currentTrailingLeft = current!.GetCorner(1)
+                const segOrigin = seg.GetCorner(0)
 
                 if (rmt.Epsilon(currentTrailingLeft[0], segOrigin[0], 0.5)
                  && rmt.Epsilon(currentTrailingLeft[0], segOrigin[0], 0.5)
                  && rmt.Epsilon(currentTrailingLeft[0], segOrigin[0], 0.5)) {
                         current = seg
-                        allocatedSegments.push_back(seg)
+                        allocatedSegments.push(seg)
                         ++numAllocated
 
                         found = true
@@ -674,7 +672,7 @@ export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
         const name = f.realFile.get_nstring()
         const segDataName = f.realFile.get_nstring()
 
-        const hierarchy = read_matrix(f.realFile)
+        const hierarchy = read_mat4(f.realFile)
         const scale = read_mat4(f.realFile)
         const z = vec3.fromValues(0, 0, 1)
         vec3.transformMat4(z, z, scale)
@@ -683,10 +681,12 @@ export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
         const rm = level_instance.roadManager_instance
         const rsd = rm.FindRoadSegmentData(segDataName)
         const rs = rm.GetFreeRoadSegmentMemory()
+        assert(rsd != null, ``)
+        assert(rs != null, ``)
         rs.SetName(name)
-        rs.Init(rsd, hierarchy, scaleAlongFacing)
+        rs.Init(rsd!, hierarchy, scaleAlongFacing)
 
-        rs.AddRoadSegment(rs)
+        rm.AddRoadSegment(rs)
         numLanes = rsd.GetNumLanes()
         level_instance.GetRenderManager().OnChunkLoaded(rs, 0/*mUserData*/, SRR2.ChunkID.ROAD_SEGMENT)
         this.sNumRoadSegmentsLoaded++
@@ -752,3 +752,14 @@ export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
         return geo
     }
 }*/
+export class AnimCollLoader { }
+export class AnimDSGLoader { }
+export class DynaPhysLoader { }
+export class InstStatEntityLoader { }
+export class InstStatPhysLoader { }
+export class BillboardWrappedLoader { }
+export class InstParticleSystemLoader { }
+export class BreakableObjectLoader { }
+export class LensFlareLoader { }
+export class AnimDynaPhysLoader { }
+export class AnimDynaPhysWrapperLoader { }

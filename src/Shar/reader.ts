@@ -1,8 +1,6 @@
-import { assert, readString } from '../util.js'
-import { NamedArrayBufferSlice } from '../DataFetcher.js'
 import { mat4, vec3 } from 'gl-matrix'
-
-import { rmt } from './math.js'
+import { assert } from '../util.js'
+import { NamedArrayBufferSlice } from '../DataFetcher.js'
 
 export class Reader {
     readonly name: string
@@ -76,17 +74,17 @@ export class Reader {
     }
 }
 
-export function read_vector(view: Reader): rmt._Vector {
-    return new rmt._Vector(view.f32(), view.f32(), view.f32())
-}
-export function read_matrix(view: Reader): rmt.Matrix {
-    return new rmt.Matrix(
-        view.f32(), view.f32(), view.f32(), view.f32(),
-        view.f32(), view.f32(), view.f32(), view.f32(),
-        view.f32(), view.f32(), view.f32(), view.f32(),
-        view.f32(), view.f32(), view.f32(), view.f32(),
-    )
-}
+// export function read_vector(view: Reader): rmt._Vector {
+//     return new rmt._Vector(view.f32(), view.f32(), view.f32())
+// }
+// export function read_matrix(view: Reader): rmt.Matrix {
+//     return new rmt.Matrix(
+//         view.f32(), view.f32(), view.f32(), view.f32(),
+//         view.f32(), view.f32(), view.f32(), view.f32(),
+//         view.f32(), view.f32(), view.f32(), view.f32(),
+//         view.f32(), view.f32(), view.f32(), view.f32(),
+//     )
+// }
 export function read_vec3(view: Reader): vec3 {
     return vec3.fromValues(view.f32(), view.f32(), view.f32())
 }

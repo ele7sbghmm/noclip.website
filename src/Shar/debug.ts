@@ -14,7 +14,6 @@ import { GfxDevice } from "../gfx/platform/GfxPlatform.js";
 import { GfxRenderInstList, GfxRenderInstManager } from "../gfx/render/GfxRenderInstManager.js";
 import { SceneGfx, ViewerRenderInput } from "../viewer.js";
 
-import { DynaLoadListDSG, WorldRenderLayer } from './world.js'
 import { GfxRenderHelper } from '../gfx/render/GfxRenderHelper.js';
 import { SceneContext } from '../SceneBase.js';
 import { UVENRenderer } from '../BeetleAdventureRacing/ParsedFiles/UVEN.js';
@@ -96,10 +95,9 @@ export class Bug implements SceneGfx {
         iWRL.mLoadLists.forEach((sect: DLLD_, index: number) => {
             if (sect == null) return
             // if (index == 0) return // global sector
-            if (sect.desc == ``) return
+            if (sect.id == ``) return
             addCheckBox(sectors, sect.desc, sect.draw, val => sect.draw = val)
         })
-
 
         const debug = new UI.Panel()
         debug.customHeaderBackgroundColor = UI.COOL_BLUE_COLOR
@@ -188,18 +186,18 @@ export class Bug implements SceneGfx {
             const p0 = vec3.create()
             const p1 = vec3.create()
             assert(tree != null, `kd-tree = null xD GL`)
-            for (let i = 0; i < tree.n_nodes; i++) {
-                const node = tree.nodes[i]
+            for (let i = 0; i < tree.mTreeNodes.mUseSize; i++) {
+                const node = tree.mTreeNodes.mpData![i].mData
                 // if (node === undefined) continue
-                switch (node.axis) {
+                switch (node.mSubDivPlane.mAxis) {
                     case 0: {
-                        vec3.set(p0, node.pos, 0, tree.bounds_min[2])
-                        vec3.set(p1, node.pos, 0, tree.bounds_max[2])
+                        vec3.set(p0, node.mSubDivPlane.mPosn, 0, tree.mTreeBounds.mMin[2])
+                        vec3.set(p1, node.mSubDivPlane.mPosn, 0, tree.mTreeBounds.mMax[2])
                         break
                     }
                     case 2: {
-                        vec3.set(p0, tree.bounds_min[0], 0, node.pos)
-                        vec3.set(p1, tree.bounds_max[0], 0, node.pos)
+                        vec3.set(p0, tree.mTreeBounds.mMin[0], 0, node.mSubDivPlane.mPosn, )
+                        vec3.set(p1, tree.mTreeBounds.mMax[0], 0, node.mSubDivPlane.mPosn, )
                         break
                     }
                     default: { continue }

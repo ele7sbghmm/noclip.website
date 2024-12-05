@@ -1,5 +1,5 @@
 import { mat4, vec2, vec3 } from "gl-matrix";
-import { AABB } from "../Geometry";
+import { AABB } from "../Geometry.js";
 
 type float = number
 type bool = boolean

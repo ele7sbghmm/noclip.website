@@ -459,7 +459,7 @@ export class RoadManager {
     mNumIntersections       = 60
     mNumRoadSegmentData     = 1200
     mRoads           = nArray( 150, () => new Road)
-    mRoadSegment     = nArray(1200, () => new RoadSegment)
+    mRoadSegments    = nArray(1200, () => new RoadSegment)
     mIntersections   = nArray(  60, () => new Intersection)
     mRoadSegmentData = nArray(1200, () => new RoadSegmentData)
     GetInstance() { return this }
@@ -468,9 +468,32 @@ export class RoadManager {
         assert(pRoad == this.mRoads[this.mNumRoadsUsed], ``)
         ++this.mNumRoadsUsed
     }
+    AddIntersection(pIntersection: Intersection) {
+        assert(this.mNumIntersectionsUsed < this.mNumIntersections)
+        assert(pIntersection === this.mIntersections[this.mNumIntersectionsUsed])
+        ++this.mNumIntersectionsUsed
+    }
+    AddRoadSegment(pRoadSegment: RoadSegment) { 
+        assert(this.mNumRoadSegmentsUsed < this.mNumRoadSegments)
+        assert(pRoadSegment === this.mRoadSegments[this.mNumRoadSegmentsUsed] )
+        ++this.mNumRoadSegmentsUsed
+    }
+    AddRoadSegmentData(pRoadSegmentData: RoadSegmentData) {
+        assert(this.mNumRoadSegmentDataUsed < this.mNumRoadSegmentData)
+        assert(pRoadSegmentData === this.mRoadSegmentData[this.mNumRoadSegmentDataUsed])
+        ++this.mNumRoadSegmentDataUsed
+    }
+    FindRoadSegmentData(name: string) {
+        for (let i = 0; i < this.mNumRoadSegmentDataUsed; ++i) {
+            if (this.mRoadSegmentData[i].GetNameUID() == name) {
+                return this.mRoadSegmentData[i]
+            }
+        }
+        return null
+    }
     FindIntersection_str(name: string): Intersection | null {
         for (let i = 0; i < this.mNumIntersectionsUsed; ++i) {
-            if (this.mIntersections[i].name == name) {
+            if (this.mIntersections[i].GetNameUID() == name) {
                 return this.mIntersections[i]
             }
         }
@@ -491,6 +514,31 @@ export class RoadManager {
         }
         return null
     }
+    GetFreeRoadSegmentDataMemory() {
+        if (0 <= this.mNumRoadSegmentsUsed
+            && this.mNumRoadSegmentDataUsed < this.mNumRoadSegmentData
+        ) {
+            return this.mRoadSegmentData[this.mNumRoadSegmentDataUsed]
+        } else {
+            //console.log(`NUMROADSUSED = ${this.mNumRoadSegmentDataUsed}, NUMROADS = ${mNumRoadSegmentData}\n`)
+        }
+        return null
+    }
+    GetFreeRoadSegmentMemory() {
+        if (0 <= this.mNumRoadSegmentsUsed
+            && this.mNumRoadSegmentsUsed < this.mNumRoadSegments) {
+            return this.mRoadSegments[this.mNumRoadSegmentsUsed]
+        }
+        return null
+    }
+    GetFreeIntersectionMemory() {
+        if(0 <= this.mNumIntersectionsUsed
+            && this.mNumIntersectionsUsed < this.mNumIntersections) {
+            return this.mIntersections[this.mNumIntersectionsUsed]
+        }
+
+        return null
+    }
 }
 export class Road {
     name: string = ``
@@ -506,7 +554,9 @@ export class Road {
     mppRoadSegmentArray: (RoadSegment | null)[]
     mnRoadSegments: (RoadSegment | null)[]
     mnMaxRoadSegments: number
-    SetName = (name: string) => { this.name = name }
+    mNameUID: string
+    SetName = (name: string) => { this.mNameUID = name }
+    GetNameUID = () => { return this.mNameUID }
     SetSpeed = (speed: number) => { this.mSpeed = speed }
     SetDifficulty = (diff: number) => { this.mDifficulty = diff }
     SetShortCut = (is: boolean) => { this.mIsShortCut = is }
@@ -528,7 +578,7 @@ export class Road {
         // }
     }
 }
-export class RoadSegment {
+export class RoadSegment extends IEntityDSG {
     mCorners: [vec3, vec3, vec3, vec3]
     mEdgeNormals: [vec3, vec3, vec3, vec3]
     mNormal: vec3
@@ -539,6 +589,9 @@ export class RoadSegment {
     mfAngle = 0
     mSphere: rmt.Sphere
     mfSegmentLength: number
+    mNameUID: string
+    SetName(name: string) { this.mNameUID = name }
+    GetNameUID() { return this.mNameUID }
     Init(rsd: RoadSegmentData, hierarchy: mat4, scaleAlongFacing: number) {
         for (let i = 0; i < 4; i++) {
             this.mCorners[i] = rsd.GetCorner(i)
@@ -627,19 +680,24 @@ export class RoadSegmentData {
     mNormal: vec3
     mCorners: [vec3, vec3, vec3, vec3]
     mEdgeNormals: [vec3, vec3, vec3, vec3]
+    mNameUID: string
+    SetName(name: string) { this.mNameUID = name }
+    GetNameUID() { return this.mNameUID }
     GetEdgeNormal(index: number) { return this.mEdgeNormals[index] }
     GetCorner(index: number) { return this.mCorners[index] }
     GetNumLanes() { return this.mnLanes }
     GetSegmentNormal() { return this.mNormal }
 }
 export class Intersection {
-    name: string
     mLocation: vec3
     mfRadius: number
     mnRoadsIn: number
     mnRoadsOut: number
     mRoadListIn: Road[]
     mRoadListOut: Road[]
+    mNameUID: string
+    SetName(name: string) { this.mNameUID = name }
+    GetNameUID() { return this.mNameUID }
     AddRoadIn(pRoad: Road) {
         this.mRoadListIn[this.mnRoadsIn] = pRoad
         this.mnRoadsIn++
@@ -650,11 +708,8 @@ export class Intersection {
     }
     IsPointInIntersection(point: vec3) {
         return vec3.length(
-            vec3.fromValues(
-                point[0] - this.mLocation[0], 
-                0, 
-                point[2] - this.mLocation[2]
-        )) <= this.mfRadius
+            vec3.fromValues(point[0] - this.mLocation[0],  0,  point[2] - this.mLocation[2])
+        ) <= this.mfRadius
     }
 }
 export enum CollisionVolumeTypeEnum {
