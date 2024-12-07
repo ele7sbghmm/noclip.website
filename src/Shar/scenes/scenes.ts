@@ -5,7 +5,7 @@ import { SceneContext } from '../SceneBase.js'
 
 import { DynaLoadListDSG, RenderFlow } from './world.js'
 import { tP3DFileHandler } from './file.js'
-import { Bug } from './debug.js'
+import { Bug } from './scenes/debug.js'
 import { RoadManager } from './dsg.js'
 
 
@@ -46,50 +46,44 @@ const levels_: LevelPaths_[] = [
 ]
 
 export class DLLD_ extends DynaLoadListDSG {
-    constructor(public id: string = ``, public desc: string = ``, public draw: boolean = false) {
+    constructor(public id: string = ``, 
+                public desc: string = ``, 
+                public draw: boolean = false) {
         super()
     }
 }
 export class Instance {
     constructor(public instance_index: number) { }
-    renderFlow_instance: RenderFlow
-    // pTriggerVolumeTracker_instance: TriggerVolumeTracker
+    renderFlow_instance = new RenderFlow
+    // pTriggerVolumeTracker_instance = new TriggerVolumeTracker
     roadManager_instance = new RoadManager
 
     _get_instance() { instances[this.instance_index] }
     CreateSingletons() {
         // this.pTriggerVolumeTracker_instance = TriggerVolumeTracker.CreateInstance()
-        this.renderFlow_instance = RenderFlow.CreateInstance()
+        // this.renderFlow_instance = RenderFlow.CreateInstance()
+        // this.atcManager_instance = ATCManager.CreateInstance()
     }
     // GetTriggerVolumeTracker() { return this.pTriggerVolumeTracker_instance }
     GetRenderFlow() { return this.renderFlow_instance }
     GetRenderManager() { return this.GetRenderFlow().mpRenderManager }
+    GetAllWrappers() { return this.GetRenderFlow().mpLoadWrappers }
 }
-const instances: (Instance | null)[] = [
-    null, new Instance(1), new Instance(2), new Instance(3),
-    new Instance(4), new Instance(5), new Instance(6), new Instance(7)
-]
-const get_streetrace_paths = (i: number) => {
-    //~ `l1_sr3p.p3d`, `missions/level01/sr3.p3d`
-    return [
-        `missions/level0${i}/sr1.p3d`, `l${i}_sr1p.p3d`, 
-        `missions/level0${i}/sr2.p3d`, `l${i}_sr2p.p3d`, 
-        `missions/level0${i}/sr3.p3d`, `l${i}_sr3p.p3d`, 
-        `missions/level0${i}/gr1.p3d`, null,
-    ]
-}
+const instances: (Instance | null)[] = [new Instance(1)]
 class SceneDesc implements Viewer.SceneDesc {
     constructor(public id: string, public name: string, public level_paths: LevelPaths_) { }
-    public async createScene(gfxDevice: GfxDevice, context: SceneContext): Promise<Viewer.SceneGfx> {
+    public async createScene(
+        gfxDevice: GfxDevice, context: SceneContext
+    ): Promise<Viewer.SceneGfx> {
         const dataFetcher = context.dataFetcher
         const path_base = `shar/art`
-
-        const global_sector_buffers = await Promise.all(this.level_paths.global_sector_paths.map(
-            path => dataFetcher.fetchData(`${path_base}/${path}`)))
-        // const street_race_buffers = await Promise.all(
-        //     get_streetrace_paths(this.level_paths.index + 1).map(
-        //         path => dataFetcher.fetchData(`${path_base}/${path}`))
-        // )
+        const i = this.level_paths.index
+        const global_sector_buffers = await Promise.all(
+            this.level_paths.global_sector_paths.map(
+                path => dataFetcher.fetchData(`${path_base}/${path}`)))
+        const streetrace_buffers = await Promise.all(
+            [`missions/level0${i}/sr1.p3d`, `l${i}_sr1p.p3d`]
+                .map(path => dataFetcher.fetchData(`${path_base}/${path}`)))
         const sector_buffers = await Promise.all(
             this.level_paths.sectors.map(
                 thing => dataFetcher.fetchData(`${path_base}/${thing.path}`)))
@@ -99,26 +93,26 @@ class SceneDesc implements Viewer.SceneDesc {
         level_instance.CreateSingletons()
         const iWRL = level_instance.GetRenderManager().pWorldRenderLayer()
         iWRL.mCurLoadIndex = 0
-        this.level_paths.global_sector_paths.forEach((path, index) => {
+
+        global_sector_buffers.forEach((buf, index) => {
             const draw = index == 0
 
-            // if (iWRL.mLoadLists[iWRL.mCurLoadIndex] == null)
-            iWRL.mLoadLists[iWRL.mCurLoadIndex] = new DLLD_(`terra`, `global`, draw)
-
-            h.load(level_instance, global_sector_buffers[index])
+            if (iWRL.mLoadLists[iWRL.mCurLoadIndex] == null)
+                iWRL.mLoadLists[iWRL.mCurLoadIndex] = new DLLD_(`terra`, `global`, draw)
+            h.load(level_instance, buf)
         })
-
-        // street_races: [
-        //     { id: `sr1`, desc: `Time-trial Race / Milhouse`, paths: [`l1_sr1p.p3d`, `missions/level01/sr1.p3d`] },
-        //     { id: `sr2`, desc: `Street Race / Ralph`,        paths: [`l1_sr2p.p3d`, `missions/level01/sr2.p3d`] },
-        //     { id: `sr3`, desc: `Circuit Race / Nelson`,      paths: [`l1_sr3p.p3d`, `missions/level01/sr3.p3d`] },
-        //     { id: `gr1`, desc: `Wager Race / Louis`,         paths: [`missions/level01/gr1.p3d`] },
-        // ],
+        iWRL.mCurLoadIndex++
+        streetrace_buffers.forEach((buf) => {
+            if (iWRL.mLoadLists[iWRL.mCurLoadIndex] == null)
+                iWRL.mLoadLists[iWRL.mCurLoadIndex] = new DLLD_(`sr1`, `Time-trial race / Milhouse`)
+            h.load(level_instance, buf)
+        })
         iWRL.mCurLoadIndex++
         this.level_paths.sectors.forEach((thing, index) => {
             const draw = this.level_paths.default_render.includes(thing.id)
 
-            iWRL.mLoadLists[iWRL.mCurLoadIndex] = new DLLD_(thing.id, thing.desc, draw)
+            if (iWRL.mLoadLists[iWRL.mCurLoadIndex] == null)
+                iWRL.mLoadLists[iWRL.mCurLoadIndex] = new DLLD_(thing.id, thing.desc, draw)
 
             h.load(level_instance, sector_buffers[index])
             iWRL.mCurLoadIndex++
@@ -130,12 +124,12 @@ class SceneDesc implements Viewer.SceneDesc {
 
 const sceneDescs: SceneDesc[] = [
     new SceneDesc(`l1`, `Level 1 - Suburbs`, levels_[1]),
-    new SceneDesc(`l2`, `Level 2 - Downtown`, levels_[2]),
-    new SceneDesc(`l3`, `Level 3 - Seaside`, levels_[3]),
-    new SceneDesc(`l4`, `Level 4 - Suburbs Night`, levels_[4]),
-    new SceneDesc(`l5`, `Level 5 - Downtown Night`, levels_[5]),
-    new SceneDesc(`l6`, `Level 6 - Seaside Night`, levels_[6]),
-    new SceneDesc(`l7`, `Level 7 - Suburbs Halloween`, levels_[7]),
+    // new SceneDesc(`l2`, `Level 2 - Downtown`, levels_[2]),
+    // new SceneDesc(`l3`, `Level 3 - Seaside`, levels_[3]),
+    // new SceneDesc(`l4`, `Level 4 - Suburbs Night`, levels_[4]),
+    // new SceneDesc(`l5`, `Level 5 - Downtown Night`, levels_[5]),
+    // new SceneDesc(`l6`, `Level 6 - Seaside Night`, levels_[6]),
+    // new SceneDesc(`l7`, `Level 7 - Suburbs Halloween`, levels_[7])
 ]
 
 const name = "The Simpsons: Hit & Run"

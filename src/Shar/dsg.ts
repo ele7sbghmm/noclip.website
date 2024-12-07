@@ -20,205 +20,303 @@ export class IntersectDSG extends IEntityDSG {
     mTriNorms: vec3[] = []
     mTerrainType: number[] = []
 }
-export class CollisionObject extends IEntityDSG {
-    nStringData: string
-    mNumJoint: number
-    mIsStatic: boolean
-    mDefaultArea: number
-    mCollisionVolumeOwner: CollisionVolumeOwner | null = null
-    mCollisionVolume: CollisionVolume | null = null
-    mSimState: SimState
-    mSelfCollisionList: SelfCollision[] = []
-
-    SetCollisionVolume(inCollisionVolume: CollisionVolume) {
-        this.mCollisionVolume = inCollisionVolume
-        for (let i = 0; i < this.mSelfCollisionList.length; i++)
-            this.SetSelfCollision(this.mSelfCollisionList[i])
-    }
-    SetSelfCollision(inSelfColl: SelfCollision) {
-        inSelfColl.mCollisionVolume1 = this.mCollisionVolume!.GetSubCollisionVolume(inSelfColl.mIndex1, inSelfColl.mSelf1)
-        inSelfColl.mCollisionVolume2 = this.mCollisionVolume!.GetSubCollisionVolume(inSelfColl.mIndex2, inSelfColl.mSelf2)
-    }
-    AddSelfCollision(inIndex1: number, inIndex2: number, inSelf1: boolean, inSelf2: boolean) {
-        // this.mSelfCollisionEnabled = true
-
-        const sc: SelfCollision = new SelfCollision
-        sc.Set(inIndex1, inIndex2, inSelf1, inSelf2)
-
-        this.mSelfCollisionList.push(sc)
-        if (this.mCollisionVolume) {
-            this.SetSelfCollision(sc)
+export namespace sim {
+    export class CollisionObject extends IEntityDSG {
+        Relocated() {
+            throw new Error('Method not implemented.')
         }
-    }
-    GetCollisionVolume(): CollisionVolume { return this.mCollisionVolume! }
-}
-export class CollisionVolume {
-    mSphereRadius: number = 1.0
-    mType: CollisionVolumeTypeEnum = CollisionVolumeTypeEnum.CollisionVolumeType
-    mOwnerIndex: number = -1
-    mCollisionObject: CollisionObject | null = null
-    public mPosition: vec3 = vec3.fromValues(0, 0, 0)
-    mBoxSize: vec3 = vec3.fromValues(0, 0, 0)
-    mDP: vec3 = vec3.fromValues(0, 0, 0)
+        Update() {
+            throw new Error('Method not implemented.')
+        }
+        nStringData: string
+        mNumJoint: number
+        mIsStatic: boolean
+        mDefaultArea: number
+        mCollisionVolumeOwner: CollisionVolumeOwner | null = null
+        mCollisionVolume: CollisionVolume | null = null
+        mSimState: SimState
+        mSelfCollisionList: SelfCollision[] = []
 
-    mSubVolumeList: Array<CollisionVolume | null>
-    mVisible: boolean
-    mUpdated: boolean
+        SetCollisionVolume(inCollisionVolume: CollisionVolume) {
+            this.mCollisionVolume = inCollisionVolume
+            for (let i = 0; i < this.mSelfCollisionList.length; i++)
+                this.SetSelfCollision(this.mSelfCollisionList[i])
+        }
+        SetSelfCollision(inSelfColl: SelfCollision) {
+            inSelfColl.mCollisionVolume1 = this.mCollisionVolume!.GetSubCollisionVolume(inSelfColl.mIndex1, inSelfColl.mSelf1)
+            inSelfColl.mCollisionVolume2 = this.mCollisionVolume!.GetSubCollisionVolume(inSelfColl.mIndex2, inSelfColl.mSelf2)
+        }
+        AddSelfCollision(inIndex1: number, inIndex2: number, inSelf1: boolean, inSelf2: boolean) {
+            // this.mSelfCollisionEnabled = true
 
-    mAxisOrientation: VolAxisOrientation
-    mObjRefIndex: number
+            const sc: SelfCollision = new SelfCollision
+            sc.Set(inIndex1, inIndex2, inSelf1, inSelf2)
 
-    SetObjRefIndex(ref: number) {
-        this.mObjRefIndex = ref
-        if (this.mSubVolumeList != null) {
-            for (let i = 0; i < this.mSubVolumeList.length; i++) {
-                this.mSubVolumeList[i]!.SetObjRefIndex(ref)
+            this.mSelfCollisionList.push(sc)
+            if (this.mCollisionVolume) {
+                this.SetSelfCollision(sc)
             }
         }
+        GetCollisionVolume(): CollisionVolume { return this.mCollisionVolume! }
     }
-    AddSubVolume(inEl: CollisionVolume) {
-        if (this.mSubVolumeList == null) {
-            this.mSubVolumeList = new Array<CollisionVolume>
-        }
-        this.mSubVolumeList.push(inEl)
-        inEl.SetCollisionObject(this.mCollisionObject!)
-    }
-    SetCollisionObject(obj: CollisionObject) {
-        if (this.mCollisionObject === obj) return
+    export class CollisionVolume {
+        mSphereRadius: number = 1.0
+        mType: CollisionVolumeTypeEnum = CollisionVolumeTypeEnum.CollisionVolumeType
+        mOwnerIndex: number = -1
+        mCollisionObject: sim.CollisionObject | null = null
+        public mPosition: vec3 = vec3.fromValues(0, 0, 0)
+        mBoxSize: vec3 = vec3.fromValues(0, 0, 0)
+        mDP: vec3 = vec3.fromValues(0, 0, 0)
 
-        this.mCollisionObject = obj
-        if (this.mSubVolumeList != null) {
-            for (let i = 0; i < this.mSubVolumeList.length; i++) {
-                this.mSubVolumeList[i]!.SetCollisionObject(this.mCollisionObject)
-            }
-        }
-    }
-    GetSubCollisionVolume(inObjRefIndex: number, inSelfOnly: boolean): CollisionVolume | null {
-        let ret: CollisionVolume | null = null
+        mSubVolumeList: Array<CollisionVolume | null>
+        mVisible: boolean
+        mUpdated: boolean
 
-        if (this.mObjRefIndex <= inObjRefIndex) {
-            if ((this.mType != CollisionVolumeTypeEnum.BBoxVolumeType || !inSelfOnly)
-                && this.mObjRefIndex == inObjRefIndex) {
-                ret = this
-            }
-            if (!ret && this.mSubVolumeList) {
+        mAxisOrientation: VolAxisOrientation
+        mObjRefIndex: number
+
+        SetObjRefIndex(ref: number) {
+            this.mObjRefIndex = ref
+            if (this.mSubVolumeList != null) {
                 for (let i = 0; i < this.mSubVolumeList.length; i++) {
-                    let cv: CollisionVolume | null = this.mSubVolumeList[i]
-                    if (cv!.mObjRefIndex == inObjRefIndex
-                        && cv!.mType != CollisionVolumeTypeEnum.BBoxVolumeType) {
-                        ret = cv
-                        break
-                    } else {
-                        cv = cv!.GetSubCollisionVolume(inObjRefIndex, inSelfOnly)
-                        if (cv) {
+                    this.mSubVolumeList[i]!.SetObjRefIndex(ref)
+                }
+            }
+        }
+        AddSubVolume(inEl: CollisionVolume) {
+            if (this.mSubVolumeList == null) {
+                this.mSubVolumeList = new Array<CollisionVolume>
+            }
+            this.mSubVolumeList.push(inEl)
+            inEl.SetCollisionObject(this.mCollisionObject!)
+        }
+        SetCollisionObject(obj: sim.CollisionObject) {
+            if (this.mCollisionObject === obj) return
+
+            this.mCollisionObject = obj
+            if (this.mSubVolumeList != null) {
+                for (let i = 0; i < this.mSubVolumeList.length; i++) {
+                    this.mSubVolumeList[i]!.SetCollisionObject(this.mCollisionObject)
+                }
+            }
+        }
+        GetSubCollisionVolume(inObjRefIndex: number, inSelfOnly: boolean): CollisionVolume | null {
+            let ret: CollisionVolume | null = null
+
+            if (this.mObjRefIndex <= inObjRefIndex) {
+                if ((this.mType != CollisionVolumeTypeEnum.BBoxVolumeType || !inSelfOnly)
+                    && this.mObjRefIndex == inObjRefIndex) {
+                    ret = this
+                }
+                if (!ret && this.mSubVolumeList) {
+                    for (let i = 0; i < this.mSubVolumeList.length; i++) {
+                        let cv: CollisionVolume | null = this.mSubVolumeList[i]
+                        if (cv!.mObjRefIndex == inObjRefIndex
+                            && cv!.mType != CollisionVolumeTypeEnum.BBoxVolumeType) {
                             ret = cv
                             break
+                        } else {
+                            cv = cv!.GetSubCollisionVolume(inObjRefIndex, inSelfOnly)
+                            if (cv) {
+                                ret = cv
+                                break
+                            }
                         }
                     }
                 }
             }
+            return ret
         }
-        return ret
     }
-}
-type tUID = number | string
-export class CollisionVolumeOwner {
-    mNumOwner: number = 0
-    mOwnerList: Array<tUID>
-    mVisible: Array<boolean>
+    type tUID = number | string
+    export class CollisionVolumeOwner {
+        mNumOwner: number = 0
+        mOwnerList: Array<tUID>
+        mVisible: Array<boolean>
 
-    SetNumOwnerList(inNum: number) {
-        this.mNumOwner = inNum
-        this.mOwnerList = Array.from({ length: this.mNumOwner }, () => 0)
-        this.mVisible = Array.from({ length: this.mNumOwner }, () => true)
+        SetNumOwnerList(inNum: number) {
+            this.mNumOwner = inNum
+            this.mOwnerList = Array.from({ length: this.mNumOwner }, () => 0)
+            this.mVisible = Array.from({ length: this.mNumOwner }, () => true)
+        }
     }
-}
-export class SelfCollision {
-    mIndex1: number = 0
-    mIndex2: number = 0
-    mSelf1: boolean = false
-    mSelf2: boolean = false
+    export class SelfCollision {
+        mIndex1: number = 0
+        mIndex2: number = 0
+        mSelf1: boolean = false
+        mSelf2: boolean = false
 
-    mCollisionVolume1: CollisionVolume | null = null
-    mCollisionVolume2: CollisionVolume | null = null
+        mCollisionVolume1: CollisionVolume | null = null
+        mCollisionVolume2: CollisionVolume | null = null
 
-    Set(inIndex1: number, inIndex2: number, inSelf1: boolean, inSelf2: boolean) {
-        this.mIndex1 = inIndex1
-        this.mIndex2 = inIndex2
-        this.mSelf1 = inSelf1
-        this.mSelf2 = inSelf2
+        Set(inIndex1: number, inIndex2: number, inSelf1: boolean, inSelf2: boolean) {
+            this.mIndex1 = inIndex1
+            this.mIndex2 = inIndex2
+            this.mSelf1 = inSelf1
+            this.mSelf2 = inSelf2
+        }
     }
-}
-export class SphereVolume extends CollisionVolume {
-    constructor(
-        public override mPosition: vec3,
-        public mSphrereRadius: number
-    ) {
-        super()
-        this.mType = CollisionVolumeTypeEnum.SphereVolumeType
-        this.mDP = mPosition
-        this.mBoxSize = vec3.fromValues(mSphrereRadius, mSphrereRadius, mSphrereRadius)
+    export class SphereVolume extends CollisionVolume {
+        constructor(
+            public override mPosition: vec3,
+            public mSphrereRadius: number
+        ) {
+            super()
+            this.mType = CollisionVolumeTypeEnum.SphereVolumeType
+            this.mDP = mPosition
+            this.mBoxSize = vec3.fromValues(mSphrereRadius, mSphrereRadius, mSphrereRadius)
+        }
     }
-}
-export class CylinderVolume extends CollisionVolume {
-    override mType = CollisionVolumeTypeEnum.CylinderVolumeType
-    override mAxisOrientation: VolAxisOrientation
-    constructor(
-        public override mPosition: vec3,
-        public mAxis: vec3,
-        public mLength: number,
-        public mCylinderRadius: number,
-        public mFlatEnd: boolean
-    ) {
-        super()
-        this.mDP = mPosition
-        this.mSphereRadius = mFlatEnd
-            ? Math.sqrt(Math.pow(this.mLength, 2) + Math.pow(mCylinderRadius, 2))
-            : mLength + mCylinderRadius
-        this.mAxisOrientation = VolAxisOrientation.VolAxisNotOriented
+    export class CylinderVolume extends CollisionVolume {
+        override mType = CollisionVolumeTypeEnum.CylinderVolumeType
+        override mAxisOrientation: VolAxisOrientation
+        constructor(
+            public override mPosition: vec3,
+            public mAxis: vec3,
+            public mLength: number,
+            public mCylinderRadius: number,
+            public mFlatEnd: boolean
+        ) {
+            super()
+            this.mDP = mPosition
+            this.mSphereRadius = mFlatEnd
+                ? Math.sqrt(Math.pow(this.mLength, 2) + Math.pow(mCylinderRadius, 2))
+                : mLength + mCylinderRadius
+            this.mAxisOrientation = VolAxisOrientation.VolAxisNotOriented
+        }
     }
-}
-export class OBBoxVolume extends CollisionVolume {
-    override mType = CollisionVolumeTypeEnum.OBBoxVolumeType
-    override mAxisOrientation = VolAxisOrientation.VolAxisNotOriented
-    mLength: vec3
-    mAxis: vec3[]
+    export class OBBoxVolume extends CollisionVolume {
+        override mType = CollisionVolumeTypeEnum.OBBoxVolumeType
+        override mAxisOrientation = VolAxisOrientation.VolAxisNotOriented
+        mLength: vec3
+        mAxis: vec3[]
 
-    constructor(public override mPosition: vec3,
-        o0: vec3, o1: vec3, o2: vec3,
-        l0: number, l1: number, l2: number) {
-        super()
-        this.mDP = mPosition
-        this.mLength = vec3.fromValues(l0, l1, l2)
-        this.mSphereRadius = Math.sqrt(Math.pow(l0, 2)
-            + Math.pow(l1, 2)
-            + Math.pow(l2, 2))
-        this.mAxis = [o0, o1, o2]
+        constructor(public override mPosition: vec3,
+            o0: vec3, o1: vec3, o2: vec3,
+            l0: number, l1: number, l2: number) {
+            super()
+            this.mDP = mPosition
+            this.mLength = vec3.fromValues(l0, l1, l2)
+            this.mSphereRadius = Math.sqrt(Math.pow(l0, 2)
+                + Math.pow(l1, 2)
+                + Math.pow(l2, 2))
+            this.mAxis = [o0, o1, o2]
+        }
     }
-}
-export class WallVolume extends CollisionVolume {
-    override mType = CollisionVolumeTypeEnum.WallVolumeType
-    override mSphereRadius = Number.MAX_VALUE
-    constructor(public override mPosition: vec3 = vec3.fromValues(0, 0, 0),
-        public mNormal: vec3 = vec3.fromValues(0, 1, 0)) { super() }
-}
-export class BBoxVolume extends CollisionVolume {
-    override mType = CollisionVolumeTypeEnum.BBoxVolumeType
-    override mAxisOrientation = VolAxisOrientation.VolAxisNotOriented
-    override mBoxSize = vec3.fromValues(1, 1, 1)
-    override mSphereRadius = 0
-    constructor() { super() }
+    export class WallVolume extends CollisionVolume {
+        override mType = CollisionVolumeTypeEnum.WallVolumeType
+        override mSphereRadius = Number.MAX_VALUE
+        constructor(public override mPosition: vec3 = vec3.fromValues(0, 0, 0),
+            public mNormal: vec3 = vec3.fromValues(0, 1, 0)) { super() }
+    }
+    export class BBoxVolume extends CollisionVolume {
+        override mType = CollisionVolumeTypeEnum.BBoxVolumeType
+        override mAxisOrientation = VolAxisOrientation.VolAxisNotOriented
+        override mBoxSize = vec3.fromValues(1, 1, 1)
+        override mSphereRadius = 0
+        constructor() { super() }
+    }
+    export class SimState {
+        mTransform: mat4 = mat4.identity(mat4.create())
+        mCollisionObject: sim.CollisionObject | null = null
+        mScale = 1.0
+        mObjectMoving: boolean
+        mVelocityState: any
+        mApproxSpeedMagnitude: number
+        mArticulated: any
+        mVirtualCM: any
+        constructor(public mControl?: SimControlEnum) { }
+        SetCollisionObject(inObject: sim.CollisionObject) {
+            this.mCollisionObject = inObject
+        }
+        static CreateStaticSimState(inCollisionObject: sim.CollisionObject): SimState {
+            return SimState.CreateSimState(inCollisionObject, null)
+        }
+        static CreateSimState(collObj: sim.CollisionObject, simOBj: any): SimState {
+            const simState = new SimState
+            if (collObj) {
+                // collObj.SetSimState(simState)
+                simState.SetCollisionObject(collObj)
+            }
+            return simState
+        }
+        GetCollisionObject(): sim.CollisionObject { return this.mCollisionObject! }
+
+        SetControl(inControl: sim.SimControlEnum) { }
+        SetTransform(inTransform: mat4, dt?: number) {
+            this.mObjectMoving = !this.SameMatrix(this.mTransform, inTransform)
+            if (this.mControl == sim.SimControlEnum.simAICtrl) {
+                if (this.mObjectMoving) { 
+                    if (dt != 0) {
+                        this.ExtractVelocityFromMatrix(
+                            this.mTransform, inTransform, this.mScale, dt, this.mVelocityState
+                        )
+                    } else {
+                        this.ResetVelocities()
+                        if (this.mCollisionObject) {
+                            this.mCollisionObject.Relocated()
+                            this.mCollisionObject.Update()
+                        }
+                    }
+                } else { this.ResetVelocities() }
+            }
+            if (this.mCollisionObject && this.mObjectMoving) { 
+                this.MoveCollisionObject(this.mTransform, inTransform)
+            }
+            this.mTransform = inTransform
+            if (this.mVirtualCM) {
+                this.mVirtualCM.Update(this.GetPosition(), this.GetLinearVelocity(), dt)
+            }
+            if (!this.mArticulated) {
+                const tmp = this.mVelocityState.mLinear.dot(this.mVelocityState.mLinear)
+                if (tmp > Math.pow(this.UpApproxSpeedMagnitude(), 2)) {
+                    this.mApproxSpeedMagnitude = Math.sqrt(tmp)
+                    if (this.mCollisionObject) { this.mCollisionObject.Relocated() }
+                } else if(tmp < this.DownApproxSpeedMagnitde()) { 
+                    this.mApproxSpeedMagnitude = Math.sqrt(tmp)
+                }
+            }
+        }
+        DownApproxSpeedMagnitde() {
+            throw new Error('Method not implemented.')
+        }
+        GetLinearVelocity(): any {
+            throw new Error('Method not implemented.')
+        }
+        GetPosition(): any {
+            throw new Error('Method not implemented.')
+        }
+        SameMatrix(mTransform: mat4, inTransform: mat4): boolean {
+            throw new Error('Method not implemented.')
+        }
+        ExtractVelocityFromMatrix(mTransform: mat4, inTransform: mat4, mScale: number, dt: number | undefined, mVelocityState: any) {
+            throw new Error('Method not implemented.')
+        }
+        ResetVelocities() {
+            throw new Error('Method not implemented.')
+        }
+        MoveCollisionObject(mTransform: any, inTransform: mat4) {
+            throw new Error('Method not implemented.')
+        }
+        UpApproxSpeedMagnitude(): number {
+            throw new Error('Method not implemented.')
+        }
+    }
+    export enum SimControlEnum {
+        simAICtrl,
+        simSimulationCtrl
+    }
 }
 export class StaticPhysDSG extends IEntityDSG {
     _color: Color = colorNewFromRGBA(Math.random(), Math.random(), Math.random())
-    mpSimStateObj: SimState
+    mpSimStateObj: sim.SimState
     mPosn: vec3
     mBBox: AABB
     mSphere: any
-    SetSimState(ipCollObj: SimState) {
+    SetSimState(ipCollObj: sim.SimState) {
         this.OnSetSimState(ipCollObj)
     }
-    OnSetSimState(ipSimState: SimState) {
+    OnSetSimState(ipSimState: sim.SimState) {
         this.mpSimStateObj = ipSimState
         this.SetInternalState()
     }
@@ -235,28 +333,6 @@ export class StaticPhysDSG extends IEntityDSG {
         // this.mSphere.centre.Add(this.mBBox.low)
         // this.mSphere.radius = this.mpSimStateObj.GetCollisionObject().GetCollisionVolume().mSphereRadius
     }
-}
-type SimControlEnum = any
-export class SimState {
-    mTransform: mat4 = mat4.identity(mat4.create())
-    mCollisionObject: CollisionObject | null = null
-    mScale = 1.0
-    constructor(public mControl?: SimControlEnum) { }
-    SetCollisionObject(inObject: CollisionObject) {
-        this.mCollisionObject = inObject
-    }
-    static CreateStaticSimState(inCollisionObject: CollisionObject): SimState {
-        return SimState.CreateSimState(inCollisionObject, null)
-    }
-    static CreateSimState(collObj: CollisionObject, simOBj: any): SimState {
-        const simState = new SimState
-        if (collObj) {
-            // collObj.SetSimState(simState)
-            simState.SetCollisionObject(collObj)
-        }
-        return simState
-    }
-    GetCollisionObject(): CollisionObject { return this.mCollisionObject! }
 }
 export class Locator extends IEntityDSG {
     mLocation: vec3
@@ -644,9 +720,9 @@ export class RoadSegment extends IEntityDSG {
 
         const box = this.GetBoundingBox()
         const vectorBetween = vec3.create()
-        vec3.sub(vectorBetween, box.high, box.low)
+        vec3.sub(vectorBetween, box.max, box.min)
         vec3.scale(vectorBetween, vectorBetween, 0.5)
-        vec3.add(this.mSphere.centre, box.low, vectorBetween)
+        vec3.add(this.mSphere.centre, box.min, vectorBetween)
         this.mSphere.radius = vec3.length(vectorBetween)
     }
     GetBoundingBox() {
@@ -655,15 +731,15 @@ export class RoadSegment extends IEntityDSG {
         for (let i = 0; i < 4; i++) {
             vec3.copy(vertex, this.mCorners[i])
             if (i == 0) {
-                vec3.copy(box.low, vertex)
-                vec3.copy(box.high, vertex)
+                vec3.copy(box.min, vertex)
+                vec3.copy(box.max, vertex)
             } else {
-                if (box.low[0] > vertex[0]) box.low[0] = vertex[0]
-                if (box.low[1] > vertex[1]) box.low[1] = vertex[1]
-                if (box.low[2] > vertex[2]) box.low[2] = vertex[2]
-                if (box.high[0] < vertex[0]) box.high[0] = vertex[0]
-                if (box.high[1] < vertex[1]) box.high[1] = vertex[1]
-                if (box.high[2] < vertex[2]) box.high[2] = vertex[2]
+                if (box.min[0] > vertex[0]) box.min[0] = vertex[0]
+                if (box.min[1] > vertex[1]) box.min[1] = vertex[1]
+                if (box.min[2] > vertex[2]) box.min[2] = vertex[2]
+                if (box.max[0] < vertex[0]) box.max[0] = vertex[0]
+                if (box.max[1] < vertex[1]) box.max[1] = vertex[1]
+                if (box.max[2] < vertex[2]) box.max[2] = vertex[2]
             }
         }
         return new rmt.Box3D()
@@ -712,6 +788,7 @@ export class Intersection {
         ) <= this.mfRadius
     }
 }
+export class InstDynaPhysDSG { }
 export enum CollisionVolumeTypeEnum {
     CollisionVolumeType = 0,
     SphereVolumeType,

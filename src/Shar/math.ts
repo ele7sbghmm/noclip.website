@@ -6,13 +6,9 @@ type bool = boolean
 
 export namespace rmt {
     export type Vector2 = vec2
-    // export type Vector = vec3
     export type Vector = vec3
     export type Matrix = mat4
-    export class Box3D extends AABB {
-        low = this.min
-        high = this.max
-    }
+    export class Box3D extends AABB { }
     export class Sphere {
         centre: Vector
         radius: float

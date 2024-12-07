@@ -48,6 +48,10 @@ export class tChunkFile {
     GetUChar() { return this.realFile.u8() }
     GetByte() { return this.realFile.u8() }
 
+    BeginInset() {
+        return this.realFile
+    }
+    EndInset() { }
     ChunksRemaining() {
         const chunk: Chunk = this.chunkStack[this.stackTop]
         return (chunk.cs > chunk.ds)
@@ -73,8 +77,8 @@ export class tChunkFile {
     EndChunk() {
         this.realFile.seek_forward(
             this.chunkStack[this.stackTop].sp
-                + this.chunkStack[this.stackTop].cs
-                - this.realFile.get_offset()
+            + this.chunkStack[this.stackTop].cs
+            - this.realFile.get_offset()
         )
         this.stackTop--
     }

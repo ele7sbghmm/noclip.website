@@ -68,67 +68,65 @@ export class BoxPts extends ISpatialProxyAA {
     // >0.0   -   Outside Spatial Proxy
     CompareTo__AAPlane3f(irPlane: AAPlane3f) {
         if (irPlane.mPosn - this.msIntersectionEpsilon
-            <= this.mBounds.mMin[irPlane.mAxis]) {
+            <= this.mBounds.min[irPlane.mAxis]) {
             return -1.0
         }
         if (irPlane.mPosn + this.msIntersectionEpsilon
-            >= this.mBounds.mMax[irPlane.mAxis]) {
+            >= this.mBounds.max[irPlane.mAxis]) {
             return 1.0
         }
         return 0.0
     }
     CompareTo__Vector3f(irPoint: Vector3f): float {
-        if (irPoint[0] < this.mBounds.mMin[0]) return 1.0
-        if (irPoint[1] < this.mBounds.mMin[1]) return 1.0
-        if (irPoint[2] < this.mBounds.mMin[2]) return 1.0
-        if (irPoint[0] > this.mBounds.mMax[0]) return 1.0
-        if (irPoint[1] > this.mBounds.mMax[1]) return 1.0
-        if (irPoint[2] > this.mBounds.mMax[2]) return 1.0
+        if (irPoint[0] < this.mBounds.min[0]) return 1.0
+        if (irPoint[1] < this.mBounds.min[1]) return 1.0
+        if (irPoint[2] < this.mBounds.min[2]) return 1.0
+        if (irPoint[0] > this.mBounds.max[0]) return 1.0
+        if (irPoint[1] > this.mBounds.max[1]) return 1.0
+        if (irPoint[2] > this.mBounds.max[2]) return 1.0
         return -1.0
     }
     CompareToXZ(irPoint: Vector3f): float {
-        if (irPoint[0] < this.mBounds.mMin[0]) return 1.0
-        if (irPoint[2] < this.mBounds.mMin[2]) return 1.0
-        if (irPoint[0] > this.mBounds.mMax[0]) return 1.0
-        if (irPoint[2] > this.mBounds.mMax[2]) return 1.0
+        if (irPoint[0] < this.mBounds.min[0]) return 1.0
+        if (irPoint[2] < this.mBounds.min[2]) return 1.0
+        if (irPoint[0] > this.mBounds.max[0]) return 1.0
+        if (irPoint[2] > this.mBounds.max[2]) return 1.0
         return -1.0
     }
     CutOffGT(irPlane3f: AAPlane3f) {
-        if (this.mBounds.mMax[irPlane3f.mAxis] > irPlane3f.mPosn) {
-            this.mBounds.mMax[irPlane3f.mAxis] = irPlane3f.mPosn
-            if (this.mBounds.mMin[irPlane3f.mAxis] > irPlane3f.mPosn) {
-                this.mBounds.mMin[irPlane3f.mAxis] = irPlane3f.mPosn
+        if (this.mBounds.max[irPlane3f.mAxis] > irPlane3f.mPosn) {
+            this.mBounds.max[irPlane3f.mAxis] = irPlane3f.mPosn
+            if (this.mBounds.min[irPlane3f.mAxis] > irPlane3f.mPosn) {
+                this.mBounds.min[irPlane3f.mAxis] = irPlane3f.mPosn
             }
         }
     }
     CutOffLT(irPlane3f: AAPlane3f) {
-        if (this.mBounds.mMin[irPlane3f.mAxis] < irPlane3f.mPosn) {
-            this.mBounds.mMin[irPlane3f.mAxis] = irPlane3f.mPosn
-            if (this.mBounds.mMax[irPlane3f.mAxis] < irPlane3f.mPosn) {
-                this.mBounds.mMax[irPlane3f.mAxis] = irPlane3f.mPosn
+        if (this.mBounds.min[irPlane3f.mAxis] < irPlane3f.mPosn) {
+            this.mBounds.min[irPlane3f.mAxis] = irPlane3f.mPosn
+            if (this.mBounds.max[irPlane3f.mAxis] < irPlane3f.mPosn) {
+                this.mBounds.max[irPlane3f.mAxis] = irPlane3f.mPosn
             }
         }
     }
     SetTo(irBounds: Bounds3f) { this.mBounds = irBounds }
 }
 export class Bounds3f extends AABB {
-    mMin = this.min
-    mMax = this.max
     Accumulate__xyz(iX: float, iY: float, iZ: float) {
-        if (iX < this.mMin[0]) this.mMin[0] = iX
-        if (iX > this.mMax[0]) this.mMax[0] = iX
-        if (iY < this.mMin[1]) this.mMin[1] = iY
-        if (iY > this.mMax[1]) this.mMax[1] = iY
-        if (iZ < this.mMin[2]) this.mMin[2] = iZ
-        if (iZ > this.mMax[2]) this.mMax[2] = iZ
+        if (iX < this.min[0]) this.min[0] = iX
+        if (iX > this.max[0]) this.max[0] = iX
+        if (iY < this.min[1]) this.min[1] = iY
+        if (iY > this.max[1]) this.max[1] = iY
+        if (iZ < this.min[2]) this.min[2] = iZ
+        if (iZ > this.max[2]) this.max[2] = iZ
     }
     Accumulate__Vector(ipPoint: rmt.Vector) {
         for (let i = 0; i < 3; i++) {
-            if (ipPoint[i] < this.mMin[i]) {
-                this.mMin[i] = ipPoint[i]
+            if (ipPoint[i] < this.min[i]) {
+                this.min[i] = ipPoint[i]
             } else {
-                if (ipPoint[i] > this.mMax[i]) {
-                    this.mMax[i] = ipPoint[i]
+                if (ipPoint[i] > this.max[i]) {
+                    this.max[i] = ipPoint[i]
                 }
             }
         }
@@ -138,12 +136,4 @@ export class AAPlane3f {
     public mAxis: number
     public mPosn: number
 }
-// export class Vector3f extends rmt.Vector {
-//     SetTo(vect: rmt.Vector): rmt.Vector {
-//         this.x = vect.x
-//         this.y = vect.y
-//         this.z = vect.z
-//         return this
-//     }
-// }
-type Vector3f = vec3
+export type Vector3f = vec3

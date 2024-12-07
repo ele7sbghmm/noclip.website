@@ -1,6 +1,6 @@
-import { assert, nArray } from '../util.js'
+import { assert, nArray } from '../../util.js'
 import { vec3, vec4, mat4, mat3, ReadonlyMat4 } from 'gl-matrix'
-import { Color, colorNewFromRGBA, colorToCSS, Green, Red, White } from "../Color.js";
+import { Color, colorNewFromRGBA, colorToCSS, Green, Red, White } from '../../Color.js';
 import {
     drawWorldSpaceText,
     drawWorldSpaceLine,
@@ -8,28 +8,28 @@ import {
     drawClipSpaceLine,
     transformToClipSpace,
     drawWorldSpaceCircle
-} from "../DebugJunk.js";
+} from '../../DebugJunk.js';
 
-import { GfxDevice } from "../gfx/platform/GfxPlatform.js";
-import { GfxRenderInstList, GfxRenderInstManager } from "../gfx/render/GfxRenderInstManager.js";
-import { SceneGfx, ViewerRenderInput } from "../viewer.js";
+import { GfxDevice } from '../../gfx/platform/GfxPlatform.js';
+import { GfxRenderInstList, GfxRenderInstManager } from '../../gfx/render/GfxRenderInstManager.js';
+import { SceneGfx, ViewerRenderInput } from '../../viewer.js';
 
-import { GfxRenderHelper } from '../gfx/render/GfxRenderHelper.js';
-import { SceneContext } from '../SceneBase.js';
-import { UVENRenderer } from '../BeetleAdventureRacing/ParsedFiles/UVEN.js';
-import { UVTRRenderer } from '../BeetleAdventureRacing/ParsedFiles/UVTR.js';
-import { TexScrollAnim, TexSeqAnim } from '../BeetleAdventureRacing/ParsedFiles/UVTX.js';
-import { DEBUGGING_TOOLS_STATE } from '../BeetleAdventureRacing/Scenes.js';
-import { TrackDataRenderer } from '../BeetleAdventureRacing/TrackData.js';
-import { CameraController } from '../Camera.js';
-import { makeAttachmentClearDescriptor, makeBackbufferDescSimple } from '../gfx/helpers/RenderGraphHelpers.js';
-import { GfxrAttachmentClearDescriptor, GfxrAttachmentSlot } from '../gfx/render/GfxRenderGraph.js';
-import InputManager from '../InputManager.js';
-import { bindingLayouts } from '../OcarinaOfTime3D/oot3d_scenes.js';
-import * as UI from '../ui.js';
-import { AABB } from '../Geometry.js';
+import { GfxRenderHelper } from '../../gfx/render/GfxRenderHelper.js';
+import { SceneContext } from '../../SceneBase.js';
+import { UVENRenderer } from '../../BeetleAdventureRacing/ParsedFiles/UVEN.js';
+import { UVTRRenderer } from '../../BeetleAdventureRacing/ParsedFiles/UVTR.js';
+import { TexScrollAnim, TexSeqAnim } from '../../BeetleAdventureRacing/ParsedFiles/UVTX.js';
+import { DEBUGGING_TOOLS_STATE } from '../../BeetleAdventureRacing/Scenes.js';
+import { TrackDataRenderer } from '../../BeetleAdventureRacing/TrackData.js';
+import { CameraController } from '../../Camera.js';
+import { makeAttachmentClearDescriptor, makeBackbufferDescSimple } from '../../gfx/helpers/RenderGraphHelpers.js';
+import { GfxrAttachmentClearDescriptor, GfxrAttachmentSlot } from '../../gfx/render/GfxRenderGraph.js';
+import InputManager from '../../InputManager.js';
+import { bindingLayouts } from '../../OcarinaOfTime3D/oot3d_scenes.js';
+import * as UI from '../../ui.js';
+import { AABB } from '../../Geometry.js';
 import { BBoxVolume, CollisionVolume, CollisionVolumeTypeEnum, CylinderVolume, OBBoxVolume, RectTriggerVolume, SphereTriggerVolume, SphereVolume, StaticPhysDSG, TriggerVolume, WallVolume, ZoneEventLocator } from './dsg.js';
-import { MathConstants, transformVec3Mat4w0, Vec3UnitX, Vec3UnitY, Vec3UnitZ } from '../MathHelpers.js';
+import { MathConstants, transformVec3Mat4w0, Vec3UnitX, Vec3UnitY, Vec3UnitZ } from '../../MathHelpers.js';
 import { DLLD_, Instance } from './scenes.js';
 
 export class Bug implements SceneGfx {
@@ -42,10 +42,10 @@ export class Bug implements SceneGfx {
     private draw_fences_height: number = 0
     private draw_paths: boolean = true
     private draw_intersect_lines: boolean = false
-    private draw_static_phys: boolean = true
-    private draw_static_phys_fill: boolean = true
-    private draw_loadzones: boolean = true
-    private draw_jumpzones: boolean = true
+    private draw_static_phys: boolean = false
+    private draw_static_phys_fill: boolean = false
+    private draw_loadzones: boolean = false
+    private draw_jumpzones: boolean = false
     constructor(public level_instance: Instance, device: GfxDevice) {
         this.renderHelper = new GfxRenderHelper(device);
 
@@ -92,10 +92,8 @@ export class Bug implements SceneGfx {
         sectors.setTitle(UI.LAYER_ICON, 'Sectors')
 
         const iWRL = this.level_instance.GetRenderManager().pWorldRenderLayer()
-        iWRL.mLoadLists.forEach((sect: DLLD_, index: number) => {
-            if (sect == null) return
-            // if (index == 0) return // global sector
-            if (sect.id == ``) return
+        iWRL.mLoadLists.forEach((sect: DLLD_ | null, index: number) => {
+            if (sect == null || index == 0) return
             addCheckBox(sectors, sect.desc, sect.draw, val => sect.draw = val)
         })
 
@@ -103,7 +101,7 @@ export class Bug implements SceneGfx {
         debug.customHeaderBackgroundColor = UI.COOL_BLUE_COLOR
         debug.setTitle(UI.LAYER_ICON, 'Debug Panel')
         const global_sector = iWRL.mLoadLists[0]
-        addCheckBox(debug, `draw global sector`, global_sector.draw, val => global_sector.draw = val)
+        addCheckBox(debug, `draw global sector`, global_sector!.draw, val => global_sector!.draw = val)
         addCheckBox(debug, `draw tree`, this.draw_tree, val => this.draw_tree = val)
         addCheckBox(debug, `draw fences`, this.draw_fences, val => this.draw_fences = val)
         addSlider(debug, `fences height`, this.draw_fences_height, 0, 100, val => this.draw_fences_height = val)
@@ -114,16 +112,16 @@ export class Bug implements SceneGfx {
         addCheckBox(debug, `draw loadzones`, this.draw_loadzones, val => this.draw_loadzones = val)
         addCheckBox(debug, `draw jumpzones`, this.draw_jumpzones, val => this.draw_jumpzones = val)
 
-        // addCheckBox("Track up directions and widths", val => this.trackDataRenderer.alsoShowTrackUpVectorAndWidthVector = val);
-        // addCheckBox("First progress val of each point", val => this.trackDataRenderer.showProgressValuesNextToTrackPoints = val);
-        // (<HTMLElement>trackDataPanel.contents.children.item(trackDataPanel.contents.children.length - 1)).style.marginBottom = "20px";
+        // addCheckBox('Track up directions and widths', val => this.trackDataRenderer.alsoShowTrackUpVectorAndWidthVector = val);
+        // addCheckBox('First progress val of each point', val => this.trackDataRenderer.showProgressValuesNextToTrackPoints = val);
+        // (<HTMLElement>trackDataPanel.contents.children.item(trackDataPanel.contents.children.length - 1)).style.marginBottom = '20px';
         // addCheckBox('Progress correction zones', val => this.trackDataRenderer.showProgressFixZones = val);
-        // addCheckBox("Progress values of each zone point", val => this.trackDataRenderer.showProgressFixZoneValues = val);
-        // (<HTMLElement>trackDataPanel.contents.children.item(trackDataPanel.contents.children.length - 1)).style.marginBottom = "20px";
-        // addCheckBox("Track segment begin planes", val => this.trackDataRenderer.showTrackSegmentBeginPlanes = val);
-        // addCheckBox("Track segment end planes", val => this.trackDataRenderer.showTrackSegmentEndPlanes = val);
+        // addCheckBox('Progress values of each zone point', val => this.trackDataRenderer.showProgressFixZoneValues = val);
+        // (<HTMLElement>trackDataPanel.contents.children.item(trackDataPanel.contents.children.length - 1)).style.marginBottom = '20px';
+        // addCheckBox('Track segment begin planes', val => this.trackDataRenderer.showTrackSegmentBeginPlanes = val);
+        // addCheckBox('Track segment end planes', val => this.trackDataRenderer.showTrackSegmentEndPlanes = val);
         // trackDataPanel.contents.append(this.buildMinMaxSegmentInputs());
-        // (<HTMLElement>trackDataPanel.contents.children.item(trackDataPanel.contents.children.length - 1)).style.marginBottom = "20px";
+        // (<HTMLElement>trackDataPanel.contents.children.item(trackDataPanel.contents.children.length - 1)).style.marginBottom = '20px';
         // trackDataPanel.contents.append(this.buildProgressValsInput());
 
         return [sectors, debug]
@@ -191,13 +189,13 @@ export class Bug implements SceneGfx {
                 // if (node === undefined) continue
                 switch (node.mSubDivPlane.mAxis) {
                     case 0: {
-                        vec3.set(p0, node.mSubDivPlane.mPosn, 0, tree.mTreeBounds.mMin[2])
-                        vec3.set(p1, node.mSubDivPlane.mPosn, 0, tree.mTreeBounds.mMax[2])
+                        vec3.set(p0, node.mSubDivPlane.mPosn, 0, tree.mTreeBounds.min[2])
+                        vec3.set(p1, node.mSubDivPlane.mPosn, 0, tree.mTreeBounds.max[2])
                         break
                     }
                     case 2: {
-                        vec3.set(p0, tree.mTreeBounds.mMin[0], 0, node.mSubDivPlane.mPosn, )
-                        vec3.set(p1, tree.mTreeBounds.mMax[0], 0, node.mSubDivPlane.mPosn, )
+                        vec3.set(p0, tree.mTreeBounds.min[0], 0, node.mSubDivPlane.mPosn, )
+                        vec3.set(p1, tree.mTreeBounds.max[0], 0, node.mSubDivPlane.mPosn, )
                         break
                     }
                     default: { continue }
@@ -483,7 +481,7 @@ export class Bug implements SceneGfx {
         fill: boolean
     ) {
         if (!volume) return
-        if (volume.mPosition == vec3.fromValues(0, 0, 0)) return
+        // if (volume.mPosition == vec3.fromValues(0, 0, 0)) return
         this.drawCollision(ctx, clipFromWorldMatrix, volume, color, thickness, fill)
         if (volume.mSubVolumeList != null && volume.mSubVolumeList.length > 0) {
             for (let i = 0; i < volume.mSubVolumeList.length; i++) {
@@ -550,7 +548,7 @@ export class Bug implements SceneGfx {
         const axis = mat3.fromValues(volume.mAxis[0][0], volume.mAxis[0][1], volume.mAxis[0][2],
                                     volume.mAxis[1][0], volume.mAxis[1][1], volume.mAxis[1][2],
                                     volume.mAxis[2][0], volume.mAxis[2][1], volume.mAxis[2][2])
-        color.a = 0.2
+        color = colorNewFromRGBA(color.r, color.g, color.b, 0.3)
         const f0 = vec3.fromValues(-volume.mLength[0], -volume.mLength[1], -volume.mLength[2])
         const f1 = vec3.fromValues( volume.mLength[0],  volume.mLength[1],  volume.mLength[2])
         const f2 = vec3.fromValues( volume.mLength[0], -volume.mLength[1], -volume.mLength[2])
