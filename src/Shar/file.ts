@@ -5,27 +5,20 @@ import { SRR2 } from './srrchunks.js'
 import { IntersectLoader, PathLoader, StaticPhysLoader, FenceLoader, TreeDSGLoader, LocatorLoader } from './loaders.js'
 // import { GetRenderManager } from './world.js'
 import { IEntityDSG } from './dsg.js'
-import { Instance } from './scenes.js'
+import { Instance } from './scenes/scenes.js'
+import { AllWrappers } from './world.js'
 
-export class AllWrappers {
-
-}
-class tSimpleChunkHandler {
+export abstract class tSimpleChunkHandler {
+    mUserData = 0
+    name: string
     // mpListenerCB = GetRenderManager()
     constructor(public id: number) { }
-    LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null { return null }
-    Load(level_instance: Instance, file: tChunkFile) { this.LoadObject(level_instance, file) }
+    abstract LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null
+    Load(level_instance: Instance, file: tChunkFile) {
+        this.LoadObject(level_instance, file)
+    }
 }
 const HEADER_SIZE = 12
-const data_handlers: { [key: number]: tSimpleChunkHandler } = {
-    [SRR2.ChunkID.TREE_DSG]: new TreeDSGLoader,
-    [SRR2.ChunkID.FENCE_DSG]: new FenceLoader,
-    [SRR2.ChunkID.INTERSECT_DSG]: new IntersectLoader,
-    [SRR2.ChunkID.STATIC_PHYS_DSG]: new StaticPhysLoader,
-    [SRR2.ChunkID.LOCATOR]: new LocatorLoader,
-    [SRR2.ChunkID.PED_PATH]: new PathLoader,
-    [SRR2.ChunkID.PED_PATH_SEGMENT]: new PathLoader,
-}
 type Chunk = { id: number, ds: number, cs: number, sp: number }
 export class tChunkFile {
     realFile: Reader
@@ -95,11 +88,16 @@ export class tChunkFile {
 }
 export class tP3DFileHandler {
     chunk_file: tChunkFile
+    m_pDataLoaders: { [key: number]: tSimpleChunkHandler }
+        = { 66060295: new FenceLoader }
+    // InitializePure3D() { }
     load(level_instance: Instance, slice: NamedArrayBufferSlice) {
         const chunk_file = new tChunkFile(slice)
         while (chunk_file.ChunksRemaining()) {
             chunk_file.BeginChunk()
-            const h: tSimpleChunkHandler = data_handlers[chunk_file.GetCurrentID()]
+            // const h = level_instance.GetAllWrappers().mpLoader(chunk_file.GetCurrentID())
+            // const h = this.GetDataLoader().mpLoader(chunk_file.GetCurrentID())
+            const h = this.m_pDataLoaders[chunk_file.GetCurrentID()]
             if (h !== undefined && h != null) {
                 h.Load(level_instance, chunk_file)
                 let _
@@ -107,4 +105,7 @@ export class tP3DFileHandler {
             chunk_file.EndChunk()
         }
     }
+    AddHandler(l: tSimpleChunkHandler, chunkID?: number) { this.m_pDataLoaders[chunkID ?? l.id] = l}
+    // AddDataLoader(id: number, ) { this.m_pDataLoaders[id] = }
+    // GetDataLoader(id: number): AllWrappers.Enum { return this.m_pDataLoaders[id] }
 }

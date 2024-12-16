@@ -57,7 +57,7 @@ export class ContiguousBinNode<T> {
     // mData: T
     mSubTreeSize: number
     mParentOffset: number
-    _s: number
+    // _s: number
 
     // enum
     private msNoChildren = 0

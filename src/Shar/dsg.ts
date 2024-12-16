@@ -1,33 +1,106 @@
+import { vec3, mat4, mat3 } from 'gl-matrix'
 import { assert, nArray } from '../util.js'
 import { Color, colorNewFromRGBA } from '../Color.js'
 import { AABB } from '../Geometry.js'
 
-import { vec3, mat4, mat3 } from 'gl-matrix'
 import { rmt } from './math.js'
+import { Bounds3f, float, tEntity } from './rad_util.js'
+// import { tPrimGroup } from './pddi/prim.js'
+// import { pddiPrimType } from './pddi/enums.js'
 
 const AXIS_ALIGNED_SNAPPING_FACTOR: number = 0.9999
 
-export class tEntity { name: string }
 export class IEntityDSG extends tEntity { }
 export class FenceEntityDSG extends IEntityDSG {
-    start: vec3
-    end: vec3
-    normal: vec3
+    mStartPoint: vec3
+    mEndPoint: vec3
+    mNormal: vec3
+    GetBoundingBox = () => {
+        const bounds = new Bounds3f
+        vec3.copy(bounds.min, this.mStartPoint)
+        vec3.copy(bounds.max, this.mStartPoint)
+        bounds.Accumulate__Vector(this.mEndPoint)
+        return new rmt.Box3D(
+            bounds.min[0], bounds.min[1], bounds.min[2], 
+            bounds.max[0], bounds.max[1], bounds.max[2], 
+        )
+    }
+    GetBoundingSphere = () => {
+        const tmp = vec3.create()
+        vec3.add(tmp, this.mStartPoint, this.mEndPoint)
+        vec3.scale(tmp, tmp, 0.5)
+        const sphere = new rmt.Sphere
+        sphere.centre = tmp
+        vec3.sub(tmp, this.mStartPoint, tmp)
+        sphere.radius = vec3.length(tmp)
+        return sphere
+    }
 }
 export class IntersectDSG extends IEntityDSG {
     mTriIndices: number[] = []
     mTriPts: vec3[] = []
     mTriNorms: vec3[] = []
     mTerrainType: number[] = []
+    mBox3D: any
+    mSphere: any
+    SetUID: string
+    mnPrimGroups: any
+    // constructor(ipGeometry?: tGeometry) {
+    //     super()
+    //     if (ipGeometry) { this.GenIDSG(ipGeometry) }
+    // }
+    // GenIDSG(ipGeometry: tGeometry) {
+    //     this.mBox3D = ipGeometry.GetBoundingBox()
+    //     this.mSphere = ipGeometry.GetBoundingSphere()
+    //     this.SetUID = ipGeometry.GetUID()
+    //     this.name = ipGeometry.name
+    //     this.mnPrimGroups = ipGeometry.GetNumPrimGroup()
+    //     for (let i = 0; i < this.mnPrimGroups; i++) {
+    //         switch (ipGeometry.GetPrimGroup(i).GetPrimType()) {
+    //             case pddiPrimType.PDDI_PRIM_TRIANGLE: {
+    //                 this.PreParseTris(ipGeometry.GetPrimGoup(i) as tPrimGroupStreamed)
+    //             } break
+    //             case pddiPrimType.PDDI_PRIM_TRISTRIP: {
+    //                 this.PreParseTriStrips(ipGeometry.GetPrimGroup(i) as tPrimGroupStreamed)
+    //             } break
+    //             default: break
+    //         }
+    //     }
+    //     this.DoAllAllocs()
+    //     for (let i = 0; i < this.mnPrimGroups; i++) {
+    //         switch (ipGeometry.GetPrimGroup(i).GetPrimType()) {
+    //             case pddiPrimType.PDDI_PRIM_TRIANGLES: {
+    //                 this.ParseTris(ipGeometry.GetPrimGroup(i) as tPrimGroupStreamed)
+    //             } break
+    //             case pddiPrimType.PDDI_PRIM_TRISTRIP: {
+    //                 this.ParseTriStrips(ipGeometry.GetPrimGroup(i) as tPrimGroupStreamed)
+    //             } break
+    //             default: break
+    //         }
+    //     }
+    //     this.CalcAllFields()
+    // }
+    // PreParseTris(arg0: tPrimGroupStreamed) {
+    //     throw new Error('Method not implemented.')
+    // }
+    // PreParseTriStrips(arg0: tPrimGroupStreamed) {
+    //     throw new Error('Method not implemented.')
+    // }
+    // DoAllAllocs() {
+    //     throw new Error('Method not implemented.')
+    // }
+    // ParseTris(arg0: tPrimGroupStreamed) {
+    //     throw new Error('Method not implemented.')
+    // }
+    // ParseTriStrips(arg0: tPrimGroupStreamed) {
+    //     throw new Error('Method not implemented.')
+    // }
+    // CalcAllFields() {
+    //     throw new Error('Method not implemented.')
+    // }
 }
 export namespace sim {
     export class CollisionObject extends IEntityDSG {
-        Relocated() {
-            throw new Error('Method not implemented.')
-        }
-        Update() {
-            throw new Error('Method not implemented.')
-        }
         nStringData: string
         mNumJoint: number
         mIsStatic: boolean
@@ -57,14 +130,22 @@ export namespace sim {
                 this.SetSelfCollision(sc)
             }
         }
-        GetCollisionVolume(): CollisionVolume { return this.mCollisionVolume! }
+        GetCollisionVolume(): CollisionVolume {
+            return this.mCollisionVolume!
+        }
+        Relocated() {
+            throw new Error('Method not implemented.')
+        }
+        Update() {
+            throw new Error('Method not implemented.')
+        }
     }
     export class CollisionVolume {
         mSphereRadius: number = 1.0
         mType: CollisionVolumeTypeEnum = CollisionVolumeTypeEnum.CollisionVolumeType
         mOwnerIndex: number = -1
         mCollisionObject: sim.CollisionObject | null = null
-        public mPosition: vec3 = vec3.fromValues(0, 0, 0)
+        mPosition: vec3 = vec3.fromValues(0, 0, 0)
         mBoxSize: vec3 = vec3.fromValues(0, 0, 0)
         mDP: vec3 = vec3.fromValues(0, 0, 0)
 
@@ -307,6 +388,18 @@ export namespace sim {
         simSimulationCtrl
     }
 }
+export class CollisionAttributes {
+    mp_Sount: string
+    mp_Animation: string
+    // ParticleEnum::ParticleID mp_Particle;
+    // BreakablesEnum::BreakableID mBreakableID;
+    mMass: float
+    mFriction: float
+    mElasticity: float
+    // mClasstypeid: enClasstypeID
+    // mPhizProp: sim.PhysicsProperties
+
+}
 export class StaticPhysDSG extends IEntityDSG {
     _color: Color = colorNewFromRGBA(Math.random(), Math.random(), Math.random())
     mpSimStateObj: sim.SimState
@@ -452,26 +545,9 @@ export class StaticEntityDSG {
     mTranslucent: boolean = false
     // mpDrawstuff: tGeometry
 }
-// export class tGeometry extends IEntityDSG {
-//     primGroup: (tPrimGroup | null)[] = []
-//     box: { low: vec3, high: vec3 }
-//     sphere: { centre: vec3, radius: number }
-//     constructor(nPG: number) {
-//         super()
-//         this.primGroup = Array.from({ length: nPG }, () => null)
-//     }
-//     SetBoundingSphere(centerx: number, centery: number, centerz: number, radius: number) {
-//         this.sphere.centre = vec3.fromValues(centerx, centery, centerz)
-//         this.sphere.radius = radius
-//     }
-//     SetBoundingBox(x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, ) {
-//         this.box.low  = vec3.fromValues(x1, y1, z1)
-//         this.box.high = vec3.fromValues(x2, y2, z2)
-//     }
-// }
 export class PathManager {
     static MAX_PATHS = 125
-    static mInstance: PathManager | null = null
+    // static mInstance: PathManager | null = null
     mPaths: Path[] = []
     mnPaths: number = 0
     mNextFreePath: number = 0
@@ -666,7 +742,7 @@ export class RoadSegment extends IEntityDSG {
     mSphere: rmt.Sphere
     mfSegmentLength: number
     mNameUID: string
-    SetName(name: string) { this.mNameUID = name }
+    // SetName(name: string) { this.mNameUID = name }
     GetNameUID() { return this.mNameUID }
     Init(rsd: RoadSegmentData, hierarchy: mat4, scaleAlongFacing: number) {
         for (let i = 0; i < 4; i++) {
@@ -788,7 +864,13 @@ export class Intersection {
         ) <= this.mfRadius
     }
 }
-export class InstDynaPhysDSG { }
+export class InstDynaPhysDSG extends IEntityDSG {
+    mTranslucent: number
+    Clone(name: string, matrix: mat4) { return this }
+    LoadSetUp(pSimState: sim.SimState, pCollAttr: CollisionAttributes | null, matrix: mat4, pDrawable: any, pShadow: null) {
+        throw new Error("Method not implemented.")
+    }
+}
 export enum CollisionVolumeTypeEnum {
     CollisionVolumeType = 0,
     SphereVolumeType,

@@ -28,7 +28,7 @@ import InputManager from '../../InputManager.js';
 import { bindingLayouts } from '../../OcarinaOfTime3D/oot3d_scenes.js';
 import * as UI from '../../ui.js';
 import { AABB } from '../../Geometry.js';
-import { BBoxVolume, CollisionVolume, CollisionVolumeTypeEnum, CylinderVolume, OBBoxVolume, RectTriggerVolume, SphereTriggerVolume, SphereVolume, StaticPhysDSG, TriggerVolume, WallVolume, ZoneEventLocator } from './dsg.js';
+import { sim, CollisionVolumeTypeEnum, RectTriggerVolume, SphereTriggerVolume, StaticPhysDSG, TriggerVolume, ZoneEventLocator } from '../dsg.js';
 import { MathConstants, transformVec3Mat4w0, Vec3UnitX, Vec3UnitY, Vec3UnitZ } from '../../MathHelpers.js';
 import { DLLD_, Instance } from './scenes.js';
 
@@ -184,7 +184,7 @@ export class Bug implements SceneGfx {
             const p0 = vec3.create()
             const p1 = vec3.create()
             assert(tree != null, `kd-tree = null xD GL`)
-            for (let i = 0; i < tree.mTreeNodes.mUseSize; i++) {
+            for (let i = 0; i < tree.mTreeNodes.mSize; i++) {
                 const node = tree.mTreeNodes.mpData![i].mData
                 // if (node === undefined) continue
                 switch (node.mSubDivPlane.mAxis) {
@@ -307,9 +307,9 @@ export class Bug implements SceneGfx {
                     ctx.beginPath()
                     sect.mFenceElems.forEach(fence => {
                         const centre = vec3.create()
-                        vec3.add(centre, fence.start, fence.end)
+                        vec3.add(centre, fence.mStartPoint, fence.mEndPoint)
                         vec3.scale(centre, centre, 0.5)
-                        const half = vec3.fromValues(fence.start[0] - centre[0], 0, fence.start[2] - centre[2])
+                        const half = vec3.fromValues(fence.mStartPoint[0] - centre[0], 0, fence.mStartPoint[2] - centre[2])
                         const length = vec3.length(half)
                         const norm = vec3.create()
                         vec3.normalize(norm, half)
@@ -320,8 +320,8 @@ export class Bug implements SceneGfx {
                                                                     this.draw_fences_height, 
                                                                     color_a)
 
-                        let [sx, sy, sz] = fence.start
-                        let [ex, ey, ez] = fence.end
+                        let [sx, sy, sz] = fence.mStartPoint
+                        let [ex, ey, ez] = fence.mEndPoint
                         const h = this.draw_fences_height
                         vec4.set(p[0], sx, -h, sz, 1.0)
                         vec4.set(p[1], sx,  h, sz, 1.0)
@@ -343,8 +343,8 @@ export class Bug implements SceneGfx {
                 } else {
                     ctx.beginPath()
                     sect.mFenceElems.forEach(fence => {
-                        let [sx, sy, sz] = fence.start
-                        let [ex, ey, ez] = fence.end
+                        let [sx, sy, sz] = fence.mStartPoint
+                        let [ex, ey, ez] = fence.mEndPoint
 
                         vec4.set(p[0], sx, sy, sz, 1.0)
                         vec4.set(p[1], ex, ey, ez, 1.0)
@@ -475,7 +475,7 @@ export class Bug implements SceneGfx {
     }
     recurseDrawCollision(ctx: CanvasRenderingContext2D,
         clipFromWorldMatrix: ReadonlyMat4,
-        volume: CollisionVolume,
+        volume: sim.CollisionVolume,
         color: Color,
         thickness: number,
         fill: boolean
@@ -493,7 +493,7 @@ export class Bug implements SceneGfx {
     }
     drawObboxLines(ctx: CanvasRenderingContext2D,
               clipFromWorldMatrix: ReadonlyMat4,
-              volume: OBBoxVolume,
+              volume: sim.OBBoxVolume,
               color: Color,
               thickness: number) {
         if (volume == null || volume.mType != 3) return
@@ -541,7 +541,7 @@ export class Bug implements SceneGfx {
     }
     drawObboxFill(ctx: CanvasRenderingContext2D,
                   clipFromWorldMatrix: ReadonlyMat4,
-                  volume: OBBoxVolume,
+                  volume: sim.OBBoxVolume,
                   color: Color,
                   thickness: number) {
         if (volume == null || volume.mType != 3) return
@@ -582,7 +582,7 @@ export class Bug implements SceneGfx {
     }
     drawCylinder(ctx: CanvasRenderingContext2D,
         clipFromWorldMatrix: ReadonlyMat4,
-        cylinder: CylinderVolume,
+        cylinder: sim.CylinderVolume,
         nPoints: number,
         color: Color,
         thickness: number): void {
@@ -625,7 +625,7 @@ export class Bug implements SceneGfx {
     }
     drawCollision(ctx: CanvasRenderingContext2D,
         clipFromWorldMatrix: ReadonlyMat4,
-        volume: CollisionVolume,
+        volume: sim.CollisionVolume,
         color: Color,
         thickness: number,
         fill: boolean
@@ -641,7 +641,7 @@ export class Bug implements SceneGfx {
                 break
             }
             case CollisionVolumeTypeEnum.SphereVolumeType: {
-                const sphere = volume as SphereVolume
+                const sphere = volume as sim.SphereVolume
                 /* drawWorldSpaceCircle(ctx: CanvasRenderingContext2D, 
                                         clipFromWorldMatrix: ReadonlyMat4, 
                                         center: ReadonlyVec3, 
@@ -675,7 +675,7 @@ export class Bug implements SceneGfx {
                 break
             }
             case CollisionVolumeTypeEnum.CylinderVolumeType: {
-                const cylinder = volume as CylinderVolume
+                const cylinder = volume as sim.CylinderVolume
                 this.drawCylinder(ctx,
                     clipFromWorldMatrix,
                     cylinder,
@@ -685,18 +685,18 @@ export class Bug implements SceneGfx {
                 break
             }
             case CollisionVolumeTypeEnum.OBBoxVolumeType: {
-                const obbox = volume as OBBoxVolume
+                const obbox = volume as sim.OBBoxVolume
                 if (fill)
                     this.drawObboxFill(ctx, clipFromWorldMatrix, obbox, color, thickness)
                 this.drawObboxLines(ctx, clipFromWorldMatrix, obbox, color, thickness)
                 break
             }
             case CollisionVolumeTypeEnum.WallVolumeType: {
-                const wall = volume as WallVolume
+                const wall = volume as sim.WallVolume
                 break
             }
             case CollisionVolumeTypeEnum.BBoxVolumeType: {
-                const bbox = volume as BBoxVolume
+                const bbox = volume as sim.BBoxVolume
                 break
             }
         }

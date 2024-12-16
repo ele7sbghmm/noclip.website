@@ -214,7 +214,8 @@ export class Scene implements Viewer.SceneGfx {
         const template = this.renderHelper.pushTemplateRenderInst();
         template.setBindingLayouts(bindingLayouts);
         template.setGfxProgram(this.program);
-        template.setMegaStateFlags({ cullMode: GfxCullMode.Back });
+        // template.setMegaStateFlags({ cullMode: GfxCullMode.Back });
+        template.setMegaStateFlags({ cullMode: GfxCullMode.None });
 
         let offs = template.allocateUniformBuffer(IVProgram.ub_SceneParams, 32);
         const mapped = template.mapUniformBufferF32(IVProgram.ub_SceneParams);

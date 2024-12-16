@@ -1,21 +1,26 @@
 import { assert } from "../util.js"
 import { mat4, vec3 } from "gl-matrix"
-import { EventLocator, FenceEntityDSG, IEntityDSG, IntersectDSG, Intersection, Locator, LocatorEvent, LocatorType, PathManager, PathSegment, RectTriggerVolume, RoadManager, RoadSegment, SphereTriggerVolume, StaticPhysDSG, TriggerLocator, TriggerVolume, ZoneEventLocator, InstDynaPhysDSG, sim } from "./dsg.js"
-import { tChunkFile } from "./file.js"
+import { EventLocator, FenceEntityDSG, IEntityDSG, IntersectDSG, Intersection, Locator, LocatorEvent, LocatorType, PathManager, PathSegment, RectTriggerVolume, RoadManager, RoadSegment, SphereTriggerVolume, StaticPhysDSG, TriggerLocator, TriggerVolume, ZoneEventLocator, InstDynaPhysDSG, sim, CollisionAttributes } from "./dsg.js"
+import { tChunkFile, tSimpleChunkHandler } from "./file.js"
 import { SRR2 } from "./srrchunks.js"
 import { read_mat4, read_vec3 } from "./reader.js"
 import { Pure3D, Simulation } from "./chunkids.js"
 import { Instance } from "./scenes/scenes.js"
-import { Bounds3f } from "./rad_util.js"
+import { Bounds3f, tEntity } from "./rad_util.js"
 import { ContiguousBinNode, SpatialTree } from "./spatial.js"
 import { rmt } from "./math.js"
 import { P3D_COMPOSITE_DRAWABLE } from "./chunks.js"
+import { AllWrappers } from "./world.js"
+// import { tPrimGroup, tPrimGroupLoader } from "./pddi/prim.js"
+// import { tCompositeDrawableLoader } from "./drawable.js"
 
-class tSimpleChunkHandler {
-    constructor(public id: number) { }
-    LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null { return null }
-    Load(level_instance: Instance, file: tChunkFile) { this.LoadObject(level_instance, file) }
-}
+// class tSimpleChunkHandler {
+//     name: string
+//     mUserData: number
+//     constructor(public id: number) { }
+//     LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null { return null }
+//     Load(level_instance: Instance, file: tChunkFile) { this.LoadObject(level_instance, file) }
+// }
 const epsilon = (x: number, n: number, e: number = 0.000001) => {
     return (x >= -e + n) && (x <= e + n)
 }
@@ -27,7 +32,11 @@ function LoadVectorFromCollisionVectorChunk(file: tChunkFile): vec3 {
     file.EndChunk()
     return v
 }
-export class IWrappedLoader { }
+export class IWrappedLoader {
+    LoadObject(level_instance: Instance, f: tChunkFile) {
+        throw new Error("Method not implemented.")
+    }
+}
 // export class AnimCollisionEntity_loader extends tSimpleChunkHandler implements IWrappedLoader{
 //     constructor() {
 //         super(Simulation.Collision.OBJECT)
@@ -40,11 +49,11 @@ export class IWrappedLoader { }
 //     }
 //     override LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
 // }
-export class CollisionObjectLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class CollisionObjectLoader extends tSimpleChunkHandler {
     constructor() {
         super(Simulation.Collision.OBJECT)
     }
-    override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG {
+    LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG {
         const newCollisionObject = new sim.CollisionObject
         newCollisionObject.mCollisionVolumeOwner = new sim.CollisionVolumeOwner
 
@@ -196,30 +205,30 @@ export class CollisionObjectLoader extends tSimpleChunkHandler implements IWrapp
     }
 }
 // export class DynaPhys_loader extends tSimpleChunkHandler implements IWrappedLoader{ LoadObject(f: tChunkFile): null { return null }}
-export class FenceLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class FenceLoader extends tSimpleChunkHandler {
     constructor() {
         super(SRR2.ChunkID.FENCE_DSG)
     }
-    override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG {
+    LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG {
         f.BeginChunk()
         const fence = new FenceEntityDSG
         switch (f.GetCurrentID()) {
             case SRR2.ChunkID.WALL: {
-                fence.start = read_vec3(f.realFile)
-                fence.end = read_vec3(f.realFile)
-                fence.normal = read_vec3(f.realFile)
+                fence.mStartPoint = read_vec3(f.realFile)
+                fence.mEndPoint = read_vec3(f.realFile)
+                fence.mNormal = read_vec3(f.realFile)
             }
         }
         f.EndChunk()
-        level_instance.GetRenderManager().OnChunkLoaded(fence, 0, SRR2.ChunkID.FENCE_DSG)
+        level_instance.GetRenderManager().OnChunkLoaded(level_instance, fence, 0, SRR2.ChunkID.FENCE_DSG)
         return fence
     }
 }
-export class IntersectLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class IntersectLoader extends tSimpleChunkHandler {
     constructor() {
         super(SRR2.ChunkID.INTERSECT_DSG)
     }
-    override LoadObject(level_instance: Instance, f: tChunkFile): null {
+    LoadObject(level_instance: Instance, f: tChunkFile): null {
         const pIDSG = new IntersectDSG
 
         let size = f.realFile.i32()
@@ -271,16 +280,16 @@ export class IntersectLoader extends tSimpleChunkHandler implements IWrappedLoad
             f.EndChunk()
         }
         // mpListenerCB..mRenderManager.OnChunkLoaded( pIDSG, mUserData, _id )
-        level_instance.GetRenderManager().OnChunkLoaded(pIDSG, 0, SRR2.ChunkID.INTERSECT_DSG)
+        level_instance.GetRenderManager().OnChunkLoaded(level_instance, pIDSG, 0, SRR2.ChunkID.INTERSECT_DSG)
         return null
     }
 }
-export class LocatorLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class LocatorLoader extends tSimpleChunkHandler {
     static msZoneNameCount: number = 0
     constructor() {
         super(SRR2.ChunkID.LOCATOR)
     }
-    override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null {
+    LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null {
         const name = f.realFile.get_nstring()
         const ttype: LocatorType.Type = f.realFile.u32()
         const numElements = f.realFile.u32()
@@ -396,12 +405,12 @@ export class LocatorLoader extends tSimpleChunkHandler implements IWrappedLoader
         return good
     }
 }
-export class PathLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class PathLoader extends tSimpleChunkHandler {
     static sNumPathSegmentsLoaded: number = 0
     constructor() {
         super(SRR2.ChunkID.PED_PATH)
     }
-    override LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
     override Load(level_instance: Instance, f: tChunkFile) {//: tLoadStatus {
         const nPoints = f.GetUInt()
         const nSegments = nPoints - 1
@@ -421,7 +430,7 @@ export class PathLoader extends tSimpleChunkHandler implements IWrappedLoader {
             ps = path.GetPathSegmentByIndex(i)
             ps.Initialize(path, i, start, end)
 
-            level_instance.GetRenderManager().OnChunkLoaded(ps, 0, SRR2.ChunkID.PED_PATH_SEGMENT)
+            level_instance.GetRenderManager().OnChunkLoaded(level_instance, ps, 0, SRR2.ChunkID.PED_PATH_SEGMENT)
             vec3.copy(start, end)
             PathLoader.sNumPathSegmentsLoaded++
         }
@@ -434,7 +443,7 @@ export class PathLoader extends tSimpleChunkHandler implements IWrappedLoader {
         // return tLoadStatus.LOAD_OK
     }
 }
-export class StaticEntityLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class StaticEntityLoader extends tSimpleChunkHandler {
     constructor() {
         super(SRR2.ChunkID.ENTITY_DSG)
     }
@@ -460,7 +469,7 @@ export class StaticEntityLoader extends tSimpleChunkHandler implements IWrappedL
     return pStaticEntityDSG
 }
 }*/
-export class StaticPhysLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class StaticPhysLoader extends tSimpleChunkHandler {
     mpCollObjLoader = new CollisionObjectLoader
 
     constructor() {
@@ -496,11 +505,11 @@ export class StaticPhysLoader extends tSimpleChunkHandler implements IWrappedLoa
             f.EndChunk()
         }
 
-        level_instance.GetRenderManager().OnChunkLoaded(pStaticPhysDSG, 0, SRR2.ChunkID.STATIC_PHYS_DSG)
+        level_instance.GetRenderManager().OnChunkLoaded(level_instance, pStaticPhysDSG, 0, SRR2.ChunkID.STATIC_PHYS_DSG)
         return pStaticPhysDSG
     }
 }
-export class TreeDSGLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class TreeDSGLoader extends tSimpleChunkHandler {
     constructor() {
         super(SRR2.ChunkID.TREE_DSG)
     }
@@ -550,23 +559,24 @@ export class TreeDSGLoader extends tSimpleChunkHandler implements IWrappedLoader
             }
             f.EndChunk()
         }
-        level_instance.GetRenderManager().OnChunkLoaded(ipSpatialTree, /*iUserData*/0, SRR2.ChunkID.TREE_DSG)
+        level_instance.GetRenderManager().OnChunkLoaded(level_instance, ipSpatialTree, /*iUserData*/0, SRR2.ChunkID.TREE_DSG)
         return null
     }
 }
-export class WorldSphereLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class WorldSphereLoader extends tSimpleChunkHandler {
     constructor() {
         super(SRR2.ChunkID.WORLD_SPHERE_DSG)
     }
-    override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null { return null }
+    LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG | null { return null }
 }
 // <DynaPhysDSG><AnimCollisionEntityDSG><AnimEntityDSG>
 type RoadList = RoadSegment[]
-export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
+export class RoadLoader extends tSimpleChunkHandler {
     sNumRoadSegmentsLoaded: number
     mNumIntersectionsUsed: number
     mIntersections: Intersection[]
     constructor() { super(SRR2.ChunkID.ROAD) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { throw `` }
     override Load(level_instance: Instance, f: tChunkFile) {
         const name = f.realFile.get_nstring()
         const type = f.GetUInt()
@@ -686,202 +696,181 @@ export class RoadLoader extends tSimpleChunkHandler implements IWrappedLoader {
 
         rm.AddRoadSegment(rs)
         numLanes = rsd.GetNumLanes()
-        level_instance.GetRenderManager().OnChunkLoaded(rs, 0/*mUserData*/, SRR2.ChunkID.ROAD_SEGMENT)
+        level_instance.GetRenderManager().OnChunkLoaded(level_instance, rs, 0/*mUserData*/, SRR2.ChunkID.ROAD_SEGMENT)
         this.sNumRoadSegmentsLoaded++
 
         return rs
     }
 }
-/*export class tGeometryLoader extends tSimpleChunkHandler implements IWrappedLoader {
-    mEnableFaceNormals = false
-    mOptimize = true
-    mVertexMask = 0xffff_ffff
-    constructor() { super(Pure3D.Mesh.MESH) }
-    override LoadObject(level_instance: Instance, f: tChunkFile): IEntityDSG {
-        const name = f.realFile.get_nstring()
-        const version = f.GetLong()
-        // bool bOptimized = ( version != GEOMETRY_NONOPTIMIZE_VERSION );
-        const nPrimGroup = f.GetLong()
-        const Allocate = (nPrimGroup: number) => new tGeometry(nPrimGroup)
-        const geo = Allocate(nPrimGroup)
-        geo.name = name
-        
-        let primGroupCount = 0
 
-        while (f.ChunksRemaining()) {
-            f.BeginChunk()
-            switch (f.GetCurrentID()) {
-                case Pure3D.Mesh.PRIMGROUP: {
-                    const pgLoader = new tPrimGroupLoader
-                    pgLoader.SetVertexFormatMask(this.mVertexMask)
-                    const pg: tPrimGroup = pgLoader.Load(f, null, this.mOptimize && bOptimized, false)
-                    geo.SetPrimGroup(primGroupCount, pg)
-                    ++primGroupCount
-                    break
-                }
-                case Pure3D.Mesh.BOX: {
-                    const minx = f.GetFloat()
-                    const miny = f.GetFloat()
-                    const minz = f.GetFloat()
-                    const maxx = f.GetFloat()
-                    const maxy = f.GetFloat()
-                    const maxz = f.GetFloat()
-
-                    geo.SetBoundingBox(minx, miny, minz, maxx, maxy, maxz)
-                    break
-                }
-                case Pure3D.Mesh.SPHERE: {
-                    const cx = f.GetFloat()
-                    const cy = f.GetFloat()
-                    const cz = f.GetFloat()
-                    const  r = f.GetFloat()
-                    geo.SetBoundingSphere(cx, cy, cz, r)
-                    break
-                }
-                case Pure3D.Mesh.RENDERSTATUS: {
-                    geo.SetCastsShadow(!(f.GetLong() as unknown as boolean))
-                }
-                default:
-                    break
-            }
-            f.EndChunk()
-        }
-
-        return geo
-    }
-}*/
-export class AnimCollLoader { }
-export class AnimDSGLoader { }
-export class DynaPhysLoader extends tSimpleChunkHandler implements IWrappedLoader {
-    mpCollObjLoader = new CollisionObjectLoader
-    mpPhysObjLoader = new PhysicsObjectLoader
-    mpCompDLoader = new tCompositeDrawableLoader
-    mUserData = 0
-    constructor() {
-        super(SRR2.ChunkID.DYNA_PHYS_DSG)
-    }
-    override LoadObject(level_instance: Instance, f: tChunkFile): null {
-        const objName = f.realFile.get_nstring()
-        const test = objName == `l1_streetlamp_Shape`
-        let doTestOnce = true
-        const pShadowName = null//BlobbyShadowNames::FineShadowName(objName)
-        if (pShadowName != null) {
-            // pShadow = p3d.find<tDrawable>(pShadowName)
-        } else {
-            const pShadow = null
-        }
-        let instanceCount = 0
-        const version = f.GetLong()
-        const HasAlpha = f.GetLong()
-        let pCollObj: sim.CollisionObject | null = null
-        let pShadow = null
-        let pPhysObj = null
-        let pDrawable = null
-        let pSimState = null
-        let pCollAttr = null
-        let foundInstances = false
-        let pCurDynaPhysDSG: InstDynaPhysDSG | null = null//level_instance.GetAllWrappers().GetGlobalEntity(objName)
-        while (f.ChunksRemaining()) {
-            f.BeginChunk()
-            switch (f.GetCurrentID()) {
-                case SRR2.ChunkID.INSTANCES: {
-                    f.BeginChunk()
-                    f.BeginChunk()
-                    f.BeginChunk()
-                    f.BeginChunk()
-                    foundInstances = true
-                    for (; f.ChunksRemaining();) {
-                        instanceCount++
-                        f.BeginChunk()
-                        const name = f.realFile.get_nstring()
-                        const numChild = f.GetLong()
-                        const matrix = read_mat4(f.realFile)
-                        if (pCurDynaPhysDSG == null) {
-                            pCurDynaPhysDSG = new InstDynaPhysDSG
-                            pCurDynaPhysDSG.SetName(name)
-                            pCurDynaPhysDSG.mTranslucent =
-                                (HasAlpha != 0) || pShadow
-                            pSimState = sim.SimState.CreateSimState(pCollObj!, pPhysObj)
-                            pSimState.SetControl(sim.SimControlEnum.simAICtrl)
-                            pSimState.SetTransform(matrix)
-                            pCurDynaPhysDSG.LoadSetUp(pSimState, pCollAttr, matrix, pDrawable, pShadow)
-                            level_instance.GetRenderManager().OnChunkLoaded(pCurDynaPhysDSG, this.mUserData, this.id)
-                            pCurDynaPhysDSG = 0
-                        } else {
-                            const clone = pCurDynaPhysDSG.Clone(name, matrix)
-                            level_instance.GetRenderManager().OnChunkLoaded(clone, this.mUserData, this.id)
-                        }
-                        f.EndChunk()
-                    }
-                    f.EndChunk()
-                    f.EndChunk()
-                    f.EndChunk()
-                    f.EndChunk()
-                } break
-                case Pure3D.Mesh.MESH: {
-                    if (pCurDynaPhysDSG == 0) {
-                        const pGeo = level_instance.GetAllWrappers().mpLoader(
-                            level_instance.GetAllWrappers().msGeometry
-                        ).LoadObject(level_instance, f)
-                        if (pGeo) { pDrawable = pGeo }
-                    }
-                } break
-                case P3D_COMPOSITE_DRAWABLE: {
-                    if (pCurDynaPhysDSG == null) {
-                        const pCompD = this.mpCompDLoader.LoadObject(level_instance, f)
-                        //storage :|
-                    } break
-                }
-                case Simulation.Physics.OBJECT: {
-                    if (pCurDynaPhysDSG == null) {
-                        const pPhysObj = this.mpPhysObjLoader.LoadObject(level_instance, f)
-                    }
-                } break
-                case Simulation.Collision.OBJECT: {
-                    if (pCurDynaPhysDSG == null) {
-                        pCollObj! = this.mpCollObjLoader.LoadObject(level_instance, f)
-                        //storage :|
-                    }
-                } break
-                case SRR2.ChunkID.OBJECT_ATTRIBUTES: {
-                    if (pCurDynaPhysDSG == null) {
-                        const classType = f.GetLong()
-                        const physPropID = f.GetLong()
-                        const tempSound = f.realFile.get_nstring()
-                        const volume = pPhysObj!.GetVolume()
-                        pCollAttr = level_instance
-                            // .GetATCManager().CreateCollisionAttributes(
-                            //     classType, physPropID, volume)
-                            // pCollAttr.SetSound(tempsound)
-                    }
-                } break
-                default:
-                    break
-            }
-            f.EndChunk()
-        }
-        if (foundInstances == false || (test && doTestOnce)) {
-            doTestOnce = false
-            const matrix = mat4.create()
-            mat4.identity(matrix)
-            pCurDynaPhysDSG = new InstDynaPhysDSG
-            pCurDynaPhysDSG = objName
-            pCurDynaPhysDSG.mTranslucent = HasAlpha
-            pSimState = sim.SimState.CreateSimState(pCollObj!, pPhysObj)
-            pSimState.SetControl(sim.SimControlEnum.simAICtrl)
-            pSimState.SetTransform(matrix)
-            pCurDynaPhysDSG.LoadSetUp(pSimState, pCollAttr, matrix, pDrawable, pShadow)
-            level_instance.GetAllWrappers().AddGlobalEntity(pCurDynaPhysDSG)
-            instanceCount++
-        }
-        return null
-    }
+const GEOMETRY_VERSION = 0
+const GEOMETRY_NONOPTIMIZE_VERSION = 1
+export class AnimCollLoader extends tSimpleChunkHandler {
+    constructor() { super(SRR2.ChunkID.ANIM_COLL_DSG) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { throw `` }
+ }
+export class AnimDSGLoader extends tSimpleChunkHandler {
+    constructor() { super(Simulation.Collision.OBJECT) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { throw `` } }
+export class PhysicsObjectLoader extends tSimpleChunkHandler {
+    constructor() { super(Simulation.Physics.OBJECT) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { throw `` }
 }
-export class InstStatEntityLoader { }
-export class InstStatPhysLoader { }
-export class BillboardWrappedLoader { }
-export class InstParticleSystemLoader { }
-export class BreakableObjectLoader { }
-export class LensFlareLoader { }
-export class AnimDynaPhysLoader { }
-export class AnimDynaPhysWrapperLoader { }
+// export class DynaPhysLoader extends tSimpleChunkHandler {
+//     mpCollObjLoader = new CollisionObjectLoader
+//     mpPhysObjLoader = new PhysicsObjectLoader
+//     mpCompDLoader = new tCompositeDrawableLoader
+
+//     constructor() { super(SRR2.ChunkID.DYNA_PHYS_DSG) }
+//     override LoadObject(level_instance: Instance, f: tChunkFile): null {
+//         const objName = f.realFile.get_nstring()
+//         const test = objName == `l1_streetlamp_Shape`
+//         let doTestOnce = true
+//         const pShadowName = null//BlobbyShadowNames::FineShadowName(objName)
+//         if (pShadowName != null) {
+//             // pShadow = p3d.find<tDrawable>(pShadowName)
+//         } else {
+//             const pShadow = null
+//         }
+//         let instanceCount = 0
+//         const version = f.GetLong()
+//         const HasAlpha = f.GetLong()
+//         let pCollObj: sim.CollisionObject | null = null
+//         let pShadow = null
+//         let pPhysObj = null
+//         let pDrawable = null
+//         let pSimState = null
+//         let pCollAttr: CollisionAttributes | null = null
+//         let foundInstances = false
+//         let pCurDynaPhysDSG: InstDynaPhysDSG = level_instance
+//             .GetAllWrappers().GetGlobalEntity(objName)
+//         while (f.ChunksRemaining()) {
+//             f.BeginChunk()
+//             switch (f.GetCurrentID()) {
+//                 case SRR2.ChunkID.INSTANCES: {
+//                     f.BeginChunk()
+//                     f.BeginChunk()
+//                     f.BeginChunk()
+//                     f.BeginChunk()
+//                     foundInstances = true
+//                     for (; f.ChunksRemaining();) {
+//                         instanceCount++
+//                         f.BeginChunk()
+//                         const name = f.realFile.get_nstring()
+//                         const numChild = f.GetLong()
+//                         const matrix = read_mat4(f.realFile)
+//                         if (pCurDynaPhysDSG == null) {
+//                             pCurDynaPhysDSG = new InstDynaPhysDSG
+//                             pCurDynaPhysDSG.name = name
+//                             pCurDynaPhysDSG.mTranslucent = (HasAlpha != 0) || pShadow!
+//                             pSimState = sim.SimState.CreateSimState(pCollObj!, pPhysObj)
+//                             pSimState.SetControl(sim.SimControlEnum.simAICtrl)
+//                             pSimState.SetTransform(matrix)
+//                             pCurDynaPhysDSG.LoadSetUp(pSimState, pCollAttr, matrix, pDrawable, pShadow)
+//                             level_instance.GetRenderManager().OnChunkLoaded(level_instance, pCurDynaPhysDSG, this.mUserData, this.id)
+//                             // pCurDynaPhysDSG = null
+//                         } else {
+//                             const clone = pCurDynaPhysDSG.Clone(name, matrix)
+//                             level_instance.GetRenderManager().OnChunkLoaded(level_instance, clone, this.mUserData, this.id)
+//                         }
+//                         f.EndChunk()
+//                     }
+//                     f.EndChunk()
+//                     f.EndChunk()
+//                     f.EndChunk()
+//                     f.EndChunk()
+//                 } break
+//                 case Pure3D.Mesh.MESH: {
+//                     if (pCurDynaPhysDSG == null) {
+//                         const pGeo = level_instance
+//                             .GetAllWrappers()
+//                             .mpLoader(AllWrappers.Enum.msGeometry)!
+//                             .LoadObject(level_instance, f)
+//                         if (pGeo != null) { pDrawable = pGeo }
+//                     }
+//                 } break
+//                 case P3D_COMPOSITE_DRAWABLE: {
+//                     if (pCurDynaPhysDSG == null) {
+//                         const pCompD = this.mpCompDLoader.LoadObject(level_instance, f)
+//                         //storage :|
+//                     } break
+//                 }
+//                 case Simulation.Physics.OBJECT: {
+//                     if (pCurDynaPhysDSG == null) {
+//                         const pPhysObj = this.mpPhysObjLoader.LoadObject(level_instance, f)
+//                     }
+//                 } break
+//                 case Simulation.Collision.OBJECT: {
+//                     if (pCurDynaPhysDSG == null) {
+//                         pCollObj = this.mpCollObjLoader.LoadObject(level_instance, f)
+//                         //storage :|
+//                     }
+//                 } break
+//                 case SRR2.ChunkID.OBJECT_ATTRIBUTES: {
+//                     if (pCurDynaPhysDSG == null) {
+//                         const classType = f.GetLong()
+//                         const physPropID = f.GetLong()
+//                         const tempSound = f.realFile.get_nstring()
+//                         const volume = pPhysObj!.GetVolume()
+//                         // pCollAttr = level_instance
+//                         //     .GetATCManager().CreateCollisionAttributes(
+//                         //         classType, physPropID, volume)
+//                         //     pCollAttr.SetSound(tempsound)
+//                     }
+//                 } break
+//                 default: { } break
+//             }
+//             f.EndChunk()
+//         }
+//         if (foundInstances == false || (test && doTestOnce)) {
+//             doTestOnce = false
+//             const matrix = mat4.create()
+//             mat4.identity(matrix)
+//             pCurDynaPhysDSG = new InstDynaPhysDSG
+//             pCurDynaPhysDSG.SetName(objName)
+//             pCurDynaPhysDSG.mTranslucent = HasAlpha
+//             pSimState = sim.SimState.CreateSimState(pCollObj!, pPhysObj)
+//             pSimState.SetControl(sim.SimControlEnum.simAICtrl)
+//             pSimState.SetTransform(matrix)
+//             pCurDynaPhysDSG.LoadSetUp(pSimState, pCollAttr!, matrix, pDrawable, pShadow)
+//             level_instance.GetAllWrappers().AddGlobalEntity(pCurDynaPhysDSG)
+//             instanceCount++
+//         }
+//         return null
+//     }
+// }
+export class InstStatEntityLoader extends tSimpleChunkHandler {
+    constructor() { super(SRR2.ChunkID.INSTA_ENTITY_DSG) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
+}
+export class InstStatPhysLoader extends tSimpleChunkHandler {
+    constructor() { super(SRR2.ChunkID.INSTA_ENTITY_DSG) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
+}
+export class tBillboardQuadGroupLoader extends tSimpleChunkHandler {
+    constructor() { super(Pure3D.BillboardObject.QUAD_GROUP) }
+    LoadObject(level_instance: Instance, f: tChunkFile): tEntity { return new tEntity }
+}
+export class BillboardWrappedLoader extends tBillboardQuadGroupLoader {
+    override LoadObject(level_instance: Instance, f: tChunkFile): tEntity { return new tEntity }
+}
+export class InstParticleSystemLoader extends tSimpleChunkHandler { 
+    constructor() { super(SRR2.ChunkID.INSTA_ENTITY_DSG) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
+}
+export class BreakableObjectLoader extends tSimpleChunkHandler { 
+    constructor() { super(SRR2.ChunkID.BREAKABLE_OBJECT) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
+}
+export class LensFlareLoader extends tSimpleChunkHandler { 
+    constructor() { super(SRR2.ChunkID.LENS_FLARE_DSG) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
+}
+export class AnimDynaPhysLoader extends tSimpleChunkHandler {
+    constructor() { super(SRR2.ChunkID.INSTA_ANIM_DYNA_PHYS_DSG) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
+}
+export class AnimDynaPhysWrapperLoader extends tSimpleChunkHandler { 
+    constructor() { super(SRR2.ChunkID.ANIM_DSG_WRAPPER) }
+    LoadObject(level_instance: Instance, f: tChunkFile): null { return null }
+}

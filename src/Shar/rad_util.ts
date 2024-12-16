@@ -16,7 +16,8 @@ export type pddiVector = vec3
 export type pddiVector2 = vec2
 export class tEntity {
     name: tName
-    SetName(name: const_char_p) { this.name = name }
+    SetName = (name: const_char_p) => { this.name = name }
+    GetUID = () => { return this.name }
 }
 export class FixedArray<T> {
     mSize: number
@@ -31,11 +32,7 @@ export class FixedArray<T> {
     }
 }
 export class ReserveArray<T> extends FixedArray<T> {
-    mUseSize: number
-    constructor(factory: () => T, iSize?: number) {
-        super(factory, iSize)
-        this.mUseSize = 0
-    }
+    mUseSize = 0
     AddUse(iCountSize: int) {
         assert((iCountSize + this.mUseSize) <= this.mSize)
         this.mUseSize += iCountSize
@@ -43,9 +40,8 @@ export class ReserveArray<T> extends FixedArray<T> {
 }
 export class SwapArray<T> extends ReserveArray<T> {
     mSwapT: T
-    constructor(factory: () => T, iSize?: number) { super(factory, iSize) }
-    ClearUse() { this.mUseSize = 0 }
-    Add(irVal: T) {
+    ClearUse = () => { this.mUseSize = 0 }
+    Add = (irVal: T) => {
         this.mpData![this.mUseSize] = irVal
         this.mUseSize
     }
@@ -62,7 +58,7 @@ export abstract class ISpatialProxyAA {
     abstract CompareToXZ(irPoint: Vector3f): float
 }
 export class BoxPts extends ISpatialProxyAA {
-    mBounds: Bounds3f
+    mBounds: Bounds3f = new Bounds3f
     // <0.0   -   Inside Spatial Proxy
     // =0.0   -   On Spatial Proxy Surface
     // >0.0   -   Outside Spatial Proxy
