@@ -3,6 +3,7 @@
 
 import { Viewer, SceneGfx, InitErrorCode, initializeViewer, makeErrorUI, resizeCanvas, ViewerUpdateInfo } from './viewer.js';
 
+import * as Scenes_Amped2 from "./src/Amped2/scenes.js";
 import * as Scenes_BanjoKazooie from './BanjoKazooie/scenes.js';
 import * as Scenes_ZeldaTwilightPrincess from './ZeldaTwilightPrincess/Main.js';
 import * as Scenes_MarioKartDoubleDash from './j3d/mkdd_scenes.js';
@@ -120,6 +121,7 @@ import { debugJunk } from './DebugJunk.js';
 import { IS_DEVELOPMENT } from './BuildVersion.js';
 
 const sceneGroups: (string | SceneGroup)[] = [
+    Scenes_Amped2.sceneGroup,
     "Wii",
     Scenes_MarioKartWii.sceneGroup,
     Scenes_KirbysReturnToDreamLand.sceneGroup,
