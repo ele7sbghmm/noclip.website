@@ -89,11 +89,11 @@ export class PgfFile {
         offs += 64
         offs += 4
 
-        this.vertexData = buffer.subarray(offs, this.vbDataSize)
+        this.vertexData = buffer.subarray(offs, this.vbDataSize, true)
         offs += this.vbDataSize
         this.vertexResources = buffer.createDataView(offs, 12 * this.numVertexBuffers)
         offs += 12 * this.numVertexBuffers
-        this.indexData = buffer.subarray(offs, this.ibDataSize)
+        this.indexData = buffer.subarray(offs, this.ibDataSize, true)
         offs += this.ibDataSize
         this.indexResources = buffer.createDataView(offs, 12 * this.numIndexBuffers)
         offs += 12 * this.numIndexBuffers
@@ -110,6 +110,8 @@ export class PgfFile {
         offs += this.miscDataSize
         // this.influenceData
         offs += this.influenceDataSize
+        // this.limData
+        offs += this.limDataSize
         // this.collisionData
         offs += this.collisionDataSize
         // this.stringTableData
@@ -175,9 +177,9 @@ export class PrimitiveListData {
             view.getUint32(offs + 24, true),
         ]
         this.lodDistances = [
-            view.getUint32(offs + 28, true),
-            view.getUint32(offs + 32, true),
-            view.getUint32(offs + 36, true),
+            view.getFloat32(offs + 28, true),
+            view.getFloat32(offs + 32, true),
+            view.getFloat32(offs + 36, true),
         ]
         this.pushBufferPtr = view.getUint32(offs + 40, true)
         this.auxDataPtr = view.getUint32(offs + 44, true)

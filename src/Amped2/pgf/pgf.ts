@@ -1,55 +1,65 @@
 import { assert } from '../../util.js'
 import ArrayBufferSlice from '../../ArrayBufferSlice.js'
 
-
 import { PgfFile, VBGeomData, PrimitiveListData } from './parse.js'
 
 export class Pgf {
+    vertexData: ArrayBufferSlice
     vbGeoms: VBGeom[] = []
-    constructor(public file: PgfFile) {
-        for (let i = 0; i < 0x30; i++) {
-            this.vbGeoms.push(new VBGeom(file, 0x30 * i))
+    constructor(buffer: ArrayBufferSlice) {
+        const pgfFile = new PgfFile(buffer)
+        this.vertexData = pgfFile.vertexData
+
+        let offs
+        let a = 0
+        let l = 30
+        for (let i = 0; i < pgfFile.numVBGeoms; i++) {
+            // for (let i = a; i < a + l; i++) {
+            offs = VBGeomData.size * i
+            this.vbGeoms.push(new VBGeom(pgfFile, offs))
         }
     }
 }
 export class VBGeom {
     vertexStartIndex: number
+    vertexStride: number
     primitiveList: PrimitiveList[] = []
-    constructor(
-        file: PgfFile,
-        vbGeomPtr: number
-    ) {
-        const vbGeomData = new VBGeomData(file.vbGeomData, vbGeomPtr)
+    vbGeomData: VBGeomData
+    constructor(file: PgfFile, vbGeomPtr: number) {
+        this.vbGeomData = new VBGeomData(file.vbGeomData, vbGeomPtr)
 
-        this.vertexStartIndex = file.vertexResources.getUint32(vbGeomData.vertexBufferPtrs[0] + 4, true)
-        const indexStartIndex = file.indexResources.getUint32(vbGeomData.indexBufferPtr + 4, true)
+        this.vertexStride = this.vbGeomData.vertexSize
+        this.vertexStartIndex = file.vertexResources.getUint32(this.vbGeomData.vertexBufferPtrs[0] + 4, true)
+        const indexStartIndex = file.indexResources.getUint32(this.vbGeomData.indexBufferPtr + 4, true)
 
-        for (let i = 0; i < vbGeomData.numOfRenderLists; i++) {
-            this.primitiveList.push(new PrimitiveList(file, vbGeomData.primitiveListPtr, indexStartIndex))
-
+        let offs
+        for (let i = 0; i < this.vbGeomData.numOfRenderLists; i++) {
+            offs = PrimitiveListData.size * i
+            this.primitiveList.push(new PrimitiveList(
+                file,
+                this.vbGeomData.primitiveListPtr + 0x30 * i,
+                indexStartIndex
+            ))
         }
     }
 }
 export class PrimitiveList {
     indexBuffer: Uint16Array
-    constructor(
-        file: PgfFile,
-        primitiveListPtr: number,
-        indexPtr: number
-    ) {
-        const primitiveList = new PrimitiveListData(file.primitiveListData, primitiveListPtr)
+    primitiveList: PrimitiveListData
+    constructor(file: PgfFile, primitiveListPtr: number, indexPtr: number) {
+        this.primitiveList = new PrimitiveListData(file.primitiveListData, primitiveListPtr)
         const actualNumOfPrimitives = Photon_GetNumVertices(
-            primitiveList.primitiveType,
-            primitiveList.numOfPrimitives
+            this.primitiveList.primitiveType,
+            this.primitiveList.numOfPrimitives
         )
         const indexSlice = file.indexData.subarray(
-            indexPtr + primitiveList.startIndex,
-            actualNumOfPrimitives,
+            indexPtr + this.primitiveList.startIndex,
+            actualNumOfPrimitives * 2,
             true
         )
         this.indexBuffer = primitiveToList(
-            primitiveList.primitiveType,
-            primitiveList.numOfPrimitives,
+            this.primitiveList.primitiveType,
+            this.primitiveList.numOfPrimitives,
             new Uint16Array(indexSlice.arrayBuffer)
         )
     }
@@ -79,13 +89,10 @@ function Photon_GetNumVertices(primitiveType: PRIMITIVETYPE, numOfPrimitives: nu
         case PRIMITIVETYPE.TRIFAN: return numOfPrimitives + 2
         case PRIMITIVETYPE.QUADLIST: return numOfPrimitives << 2
         case PRIMITIVETYPE.QUADSTRIP: return numOfPrimitives * 2 + 2
+        default: assert(false, `${primitiveType} unknown primitive`)
     }
 }
-function primitiveToList(
-    primitiveType: PRIMITIVETYPE,
-    numOfPrimitives: number,
-    indexData: Uint16Array
-) {
+function primitiveToList(primitiveType: PRIMITIVETYPE, numOfPrimitives: number, indexData: Uint16Array) {
     switch (primitiveType) {
         case PRIMITIVETYPE.POINTLIST:
         case PRIMITIVETYPE.LINELIST:
