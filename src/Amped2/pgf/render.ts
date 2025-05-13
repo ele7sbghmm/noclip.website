@@ -34,6 +34,7 @@ export class PgfRenderer {
         this.vbGeomRenderers.forEach(geom => geom.prepareToRender(renderInstManager))
     }
 }
+
 class VBGeomRenderer {
     primListRenderers: PrimListRenderer[]
     vertexBufferDescriptors: GfxVertexBufferDescriptor[]
@@ -61,6 +62,7 @@ class VBGeomRenderer {
         ))
     }
 }
+
 class PrimListRenderer {
     drawCount: number
     indexDataBuffer: GfxBuffer

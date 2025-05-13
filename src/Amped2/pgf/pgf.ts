@@ -11,10 +11,7 @@ export class Pgf {
         this.vertexData = pgfFile.vertexData
 
         let offs
-        let a = 0
-        let l = 30
         for (let i = 0; i < pgfFile.numVBGeoms; i++) {
-            // for (let i = a; i < a + l; i++) {
             offs = VBGeomData.size * i
             this.vbGeoms.push(new VBGeom(pgfFile, offs))
         }

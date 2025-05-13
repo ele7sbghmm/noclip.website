@@ -5,7 +5,8 @@ import { GfxrAttachmentSlot } from '../gfx/render/GfxRenderGraph.js'
 import { makeBackbufferDescSimple, makeAttachmentClearDescriptor, standardFullClearRenderPassDescriptor } from '../gfx/helpers/RenderGraphHelpers.js'
 import { GfxRenderHelper } from '../gfx/render/GfxRenderHelper.js'
 import { GfxRenderInstList } from '../gfx/render/GfxRenderInstManager.js'
-import { GfxDevice, GfxProgram, GfxCullMode } from '../gfx/platform/GfxPlatform.js'
+import { GfxDevice, GfxProgram, GfxCullMode, GfxBlendFactor, GfxBlendMode } from '../gfx/platform/GfxPlatform.js'
+import { setAttachmentStateSimple } from '../gfx/helpers/GfxMegaStateDescriptorHelpers.js'
 import { fillMatrix4x4, fillMatrix4x3 } from '../gfx/helpers/UniformBufferHelpers.js'
 import { GfxShaderLibrary } from '../gfx/helpers/GfxShaderLibrary.js'
 
@@ -36,10 +37,7 @@ void mainVS() {
     float t_Scale = 100.;
     vec3 t_Position = UnpackMatrix(u_View) * vec4(a_Position * t_Scale, 1.);
     gl_Position = UnpackMatrix(u_Projection) * vec4(t_Position, 1.);
-    float t_Alpha = float(a_Color.a) / 255.;
-    // v_Color = vec4(a_Color) / 255. * t_Alpha;
-    // v_Color = vec4(a_Color) / 255.;
-    v_Color = vec4(1., 1., 1., t_Alpha) * t_Alpha;
+    v_Color = vec4(a_Color) / 255.;
 }
 #endif
 
@@ -67,10 +65,17 @@ export class Scene implements Viewer.SceneGfx {
         this.renderHelper.destroy()
     }
     prepareToRender(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput) {
+        const megaStateFlags = { cullMode: GfxCullMode.Front }
+        setAttachmentStateSimple(megaStateFlags, {
+            blendMode: GfxBlendMode.Add,
+            blendSrcFactor: GfxBlendFactor.SrcAlpha,
+            blendDstFactor: GfxBlendFactor.OneMinusSrcAlpha,
+        })
         const template = this.renderHelper.pushTemplateRenderInst()
+
         template.setBindingLayouts([{ numUniformBuffers: 1, numSamplers: 0 }])
         template.setGfxProgram(this.program)
-        template.setMegaStateFlags({ cullMode: GfxCullMode.None })
+        template.setMegaStateFlags(megaStateFlags)
 
         let offs = template.allocateUniformBuffer(Program.ub_SceneParams, 32)
         const mapped = template.mapUniformBufferF32(Program.ub_SceneParams)
