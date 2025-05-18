@@ -16,6 +16,7 @@ import { GfxRenderCache } from '../gfx/render/GfxRenderCache.js'
 import { Fence } from './fence.js'
 import { Intersect } from './intersect.js'
 import { StaticEntity } from './staticEntity.js'
+import { Thing } from './scenes.js'
 
 export class Program extends DeviceProgram {
     static a_Position = 0
@@ -48,58 +49,94 @@ void mainVS() {
 
     vec3 t_LightDir = normalize(vec3(.2, -1., .5));
     v_LightIntensity = -dot(a_Normal, t_LightDir);
+    v_Color = vec4(.5, .5, .5, 1.);
+#ifdef USE_VERTEX_COLOR
     v_Color = vec4(a_Color) / 255.;
+#endif
 }
 #endif
 
 #ifdef FRAG
 void mainPS() {
-    float t_LightTint = v_LightIntensity * .7;
-    gl_FragColor = v_Color * vec4(t_LightTint, t_LightTint, t_LightTint, 0.);
+    float t_LightTint = v_LightIntensity * .1;
+    gl_FragColor = v_Color + vec4(t_LightTint, t_LightTint, t_LightTint, 0.);
 }
 #endif
 `}
 
 class Sector {
+    name: string
     visible: boolean = true
+
     staticEntity: StaticEntity
-    intersects: Intersect
+    intersect: Intersect
 
     public setVisible(b: boolean) { this.visible = b }
-    constructor(public name: string, device: GfxDevice, renderCache: GfxRenderCache, buffer: ArrayBufferSlice) {
-        this.staticEntity = new StaticEntity(device, renderCache, buffer.arrayBuffer)
+    constructor(
+        device: GfxDevice,
+        renderCache: GfxRenderCache,
+        obj: Thing,
+        public visibleStaticEntities: boolean,
+        public visibleIntersects: boolean
+    ) {
+        this.name = obj.name
+        this.staticEntity = new StaticEntity(device, renderCache, obj.staticEntityBuffer.arrayBuffer)
+        this.intersect = new StaticEntity(device, renderCache, obj.intersectBuffer.arrayBuffer)
     }
     destroy(device: GfxDevice) {
-        this.intersects.destroy(device)
         this.staticEntity.destroy(device)
+        this.intersect.destroy(device)
     }
     prepareToRender(renderInstManager: GfxRenderInstManager) {
         if (this.visible) {
-            this.staticEntity.prepareToRender(renderInstManager)
+            if (this.visibleStaticEntities) { this.staticEntity.prepareToRender(renderInstManager) }
+            if (this.visibleIntersects) { this.intersect.prepareToRender(renderInstManager) }
         }
     }
 }
+
 export class Scene implements Viewer.SceneGfx {
     fence: Fence
     sectors: Sector[]
 
-    program: GfxProgram
-    renderHelper: GfxRenderHelper
-    renderInstListFence = new GfxRenderInstList
-    renderInstListMain = new GfxRenderInstList
-    constructor(
-        device: GfxDevice,
-        fenceBuffer: ArrayBufferLike,
-        staticEntityBuffers: { name: string, buffer: ArrayBufferSlice }[]
-    ) {
-        this.renderHelper = new GfxRenderHelper(device)
-        const renderCache = this.renderHelper.renderCache
-        this.program = renderCache.createProgram(new Program)
+    visibleStaticEntities: boolean = true
+    visibleIntersects: boolean = false
+    visibleFence: boolean = false
 
-        this.fence = new Fence(device, this.renderHelper.renderCache, fenceBuffer)
-        this.sectors = staticEntityBuffers.map(obj => {
-            return new Sector(obj.name, device, renderCache, obj.buffer)
+    enableVertexColor: boolean = true
+
+    program: Program
+    gfxProgram: GfxProgram | null
+
+    renderHelper: GfxRenderHelper
+    renderInstListMain = new GfxRenderInstList
+
+    public setVisibleStaticEntities = (b: boolean) => { this.sectors.forEach(sector => { sector.visibleStaticEntities = b }) }
+    public setVisibleIntersects = (b: boolean) => { this.sectors.forEach(sector => { sector.visibleIntersects = b }) }
+    public setVisibleFence = (b: boolean) => { this.fence.visible = b }
+
+    public setEnableVertexColor = (b: boolean) => {
+        this.enableVertexColor = b
+        this.createProgram()
+    }
+    constructor(device: GfxDevice, fenceBuffer: ArrayBufferSlice, buffers: Thing[]) {
+        this.renderHelper = new GfxRenderHelper(device)
+
+        const renderCache = this.renderHelper.renderCache
+        this.createProgram()
+
+        this.fence = new Fence(device, renderCache, fenceBuffer.arrayBuffer, this.visibleFence)
+        this.sectors = buffers.map(obj => {
+            return new Sector(device, renderCache, obj, this.visibleStaticEntities, this.visibleIntersects)
         })
+    }
+    createProgram() {
+        const program = new Program
+        if (this.enableVertexColor) {
+            program.defines.set('USE_VERTEX_COLOR', '1')
+        }
+        this.gfxProgram = null
+        this.program = program
     }
     destroy(device: GfxDevice) {
         this.fence.destroy(device)
@@ -109,9 +146,13 @@ export class Scene implements Viewer.SceneGfx {
     prepareToRender(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput) {
         const template = this.renderHelper.pushTemplateRenderInst()
 
+        if (this.gfxProgram === null) {
+            this.gfxProgram = this.renderHelper.renderInstManager.gfxRenderCache.createProgram(this.program)
+        }
+
         template.setBindingLayouts([{ numUniformBuffers: 1, numSamplers: 0 }])
-        template.setGfxProgram(this.program)
-        template.setMegaStateFlags({ cullMode: GfxCullMode.Back })
+        template.setGfxProgram(this.gfxProgram)
+        template.setMegaStateFlags({ cullMode: GfxCullMode.None })
 
         let offs = template.allocateUniformBuffer(Program.ub_SceneParams, 32)
         const mapped = template.mapUniformBufferF32(Program.ub_SceneParams)
@@ -152,9 +193,24 @@ export class Scene implements Viewer.SceneGfx {
         this.renderInstListMain.reset()
     }
     createPanels(): UI.Panel[] {
+        const addCheckBox = (panel: UI.Panel, label: string, b: boolean, setMethod: (b: boolean) => void) => {
+            let box = new UI.Checkbox(label, b)
+            box.onchanged = () => setMethod(box.checked)
+            panel.contents.appendChild(box.elem)
+        }
+
+        const debug = new UI.Panel()
+        debug.customHeaderBackgroundColor = UI.COOL_BLUE_COLOR;
+        debug.setTitle(UI.LAYER_ICON, 'Display Track Data');
+
+        addCheckBox(debug, 'draw fences', this.visibleFence, b => this.setVisibleFence(b))
+        addCheckBox(debug, 'draw static entities', this.visibleStaticEntities, b => this.setVisibleStaticEntities(b))
+        addCheckBox(debug, 'draw intersects', this.visibleIntersects, b => this.setVisibleIntersects(b))
+
+        addCheckBox(debug, 'enable vertex color', this.enableVertexColor, b => this.setEnableVertexColor(b))
+
         const layers = new UI.LayerPanel()
         layers.setLayers(this.sectors)
-        return [layers]
-
+        return [debug, layers]
     }
 }

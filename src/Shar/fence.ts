@@ -15,16 +15,17 @@ import {
 import { Program } from './render.js'
 
 export class Fence {
+    name: string = ""
+
     drawCount: number
     program: GfxProgram
     vertexDataBuffer: GfxBuffer
     inputLayout: GfxInputLayout
     vertexBufferDescriptors: GfxVertexBufferDescriptor[]
-    constructor(device: GfxDevice, renderCache: GfxRenderCache, buffer: ArrayBufferLike) {
+    public setVisible(b: boolean) { this.visible = b }
+    constructor(device: GfxDevice, renderCache: GfxRenderCache, buffer: ArrayBufferLike, public visible: boolean) {
         const stride = 28
         this.drawCount = buffer.byteLength / stride
-
-        this.program = renderCache.createProgram(new Program)
 
         const vertexAttributeDescriptors = [
             { location: Program.a_Position, format: GfxFormat.F32_RGB, bufferIndex: 0, bufferByteOffset: 0 },
@@ -40,14 +41,14 @@ export class Fence {
             indexBufferFormat: null
         })
         this.vertexDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, buffer)
-        this.vertexBufferDescriptors = [
-            { buffer: this.vertexDataBuffer, byteOffset: 0 },
-        ]
+        this.vertexBufferDescriptors = [{ buffer: this.vertexDataBuffer, byteOffset: 0 }]
     }
     destroy(device: GfxDevice) {
         device.destroyBuffer(this.vertexDataBuffer)
     }
     prepareToRender(renderInstManager: GfxRenderInstManager) {
+        if (!this.visible) { return }
+
         const renderInst = renderInstManager.newRenderInst()
 
         renderInst.setVertexInput(this.inputLayout, this.vertexBufferDescriptors, null)

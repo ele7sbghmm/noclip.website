@@ -19,10 +19,14 @@ import {
 import { Program } from './render.js'
 
 export class StaticEntity {
+    name: string = ""
+    visible: boolean = true
+
     drawCount: number
     vertexDataBuffer: GfxBuffer
     inputLayout: GfxInputLayout
     vertexBufferDescriptors: GfxVertexBufferDescriptor[]
+    public setVisible(b: boolean) { this.visible = b }
     constructor(device: GfxDevice, renderCache: GfxRenderCache, buffer: ArrayBufferLike) {
         const stride = 28
         this.drawCount = buffer.byteLength / stride
