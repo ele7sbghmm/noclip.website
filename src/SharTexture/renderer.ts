@@ -1,4 +1,5 @@
 import * as Viewer from '../viewer.js'
+import ArrayBufferSlice from '../ArrayBufferSlice.js'
 import { colorNewFromRGBA } from '../Color.js'
 import { DeviceProgram } from '../Program.js'
 import { GfxDevice, GfxProgram, GfxCullMode } from '../gfx/platform/GfxPlatform.js'
@@ -10,11 +11,14 @@ import { fillMatrix4x4, fillMatrix4x3 } from '../gfx/helpers/UniformBufferHelper
 import { GfxrAttachmentSlot } from '../gfx/render/GfxRenderGraph.js'
 
 import { StaticEntity } from './staticEntity.js'
+import { Muncher } from './chunkMuncher.js'
 
 export class Program extends DeviceProgram {
   static a_Position = 0
-  static a_Color = 1
-  static a_TexCoord = 2
+  static a_Normal = 1
+  static a_Color = 2
+  static a_TexCoord = 3
+
   static ub_SceneParams = 0
   override both = `
 precision mediump float;
@@ -33,6 +37,7 @@ varying vec2 v_TexCoord;
 
 #ifdef VERT
 layout(location = ${Program.a_Position}) attribute vec3 a_Position;
+layout(location = ${Program.a_Normal}) attribute vec3 a_Normal;
 layout(location = ${Program.a_Color}) attribute uvec4 a_Color;
 layout(location = ${Program.a_TexCoord}) attribute vec2 a_TexCoord;
 
@@ -41,16 +46,16 @@ void main() {
   vec3 t_PositionWorld = UnpackMatrix(u_View) * vec4(a_Position * t_Scale, 1.);
   gl_Position = UnpackMatrix(u_Projection) * vec4(t_PositionWorld, 1.);
   v_Color = vec4(a_Color) / 255.;
-  v_TexCoord = a_TexCoord;
+  // v_TexCoord = a_TexCoord;
 }
 #endif
 
 #ifdef FRAG
 void main() {
 
-#ifdef USE_TEXTURE
-  vec4 v_Color = texture(SAMPLER_2D(u_Texture), v_TexCoord);
-#endif
+// #ifdef USE_TEXTURE
+//   vec4 v_Color = texture(SAMPLER_2D(u_Texture), v_TexCoord);
+// #endif
   gl_FragColor = v_Color;
 }
 #endif
@@ -58,18 +63,18 @@ void main() {
 }
 
 export class Scene implements Viewer.SceneGfx {
-  staticEntity: StaticEntity
+  staticEntities: StaticEntity[]
 
   renderHelper: GfxRenderHelper
   program: Program
   gfxProgram: GfxProgram | null
   renderInstListMain = new GfxRenderInstList
 
-  constructor(device: GfxDevice, buffer: ArrayBufferLike, imageData: ImageData) {
+  constructor(device: GfxDevice, buffer: ArrayBufferSlice) {
     this.createProgram()
     this.renderHelper = new GfxRenderHelper(device)
 
-    this.staticEntity = new StaticEntity(device, this.renderHelper.renderCache, buffer, imageData)
+    this.staticEntities = Muncher.staticEntities(device, this.renderHelper.renderCache, buffer)
   }
   createProgram() {
     this.program = new Program
@@ -78,7 +83,7 @@ export class Scene implements Viewer.SceneGfx {
     this.gfxProgram = null
   }
   destroy(device: GfxDevice) {
-    this.staticEntity.destroy(device)
+    this.staticEntities.forEach(se => se.destroy(device))
     this.renderHelper.destroy()
   }
   prepareToRender(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput) {
@@ -99,7 +104,7 @@ export class Scene implements Viewer.SceneGfx {
 
     this.renderHelper.renderInstManager.setCurrentList(this.renderInstListMain)
 
-    this.staticEntity.prepareToRender(this.renderHelper.renderInstManager)
+    this.staticEntities.forEach(se => se.prepareToRender(this.renderHelper.renderInstManager))
 
     this.renderHelper.renderInstManager.popTemplate()
     this.renderHelper.prepareToRender()
