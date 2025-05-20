@@ -32,6 +32,7 @@ export class TextureLoader {
         }
         case ID.VOLUME_IMAGE: { break }
       }
+      c.endChunk()
     }
   }
 }
@@ -59,9 +60,11 @@ class ImageLoader {
           const size = c.view.getUint32(c.offset + 0, true)
           const data = c.buffer.subarray(c.offset + 4, size, true)
           pngList[name] = data
+          break
         }
-        case ID.IMAGE_FILENAME: { }
+        case ID.IMAGE_FILENAME: { break }
       }
+      c.endChunk()
     }
   }
 }

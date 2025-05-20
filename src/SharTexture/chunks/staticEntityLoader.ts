@@ -3,10 +3,20 @@ import { ID } from './ids.js'
 import { ChunkHandler } from '../chunkHandler.js'
 import { StaticEntityBuffers } from '../staticEntity.js'
 
+export type PrimGroupBuffer = {
+}
 export class StaticEntityLoader {
-  static getBuffers(c: ChunkHandler) {
+  name: string
+  shaderName: string
+  positionData: ArrayBufferSlice
+  normalData: ArrayBufferSlice
+  colorData: ArrayBufferSlice
+  uvData: ArrayBufferSlice
+  indexData: ArrayBufferSlice
+
+  constructor(c: ChunkHandler) {
     const nameLen = c.view.getUint8(c.offset + 0)
-    const name = new TextDecoder('ascii')
+    this.name = new TextDecoder('ascii')
       .decode(new DataView(c.view.buffer, c.offset + 1, nameLen))
       .replace(/\x00/g, '')
     c.offset += 1 + nameLen
@@ -19,17 +29,16 @@ export class StaticEntityLoader {
     while (c.chunksRemaining()) {
       switch (c.beginChunk()) {
         case ID.MESH: {
-          mesh = MeshLoader.getBuffers(c)
+          new MeshLoader(c, this)
         }
       }
       c.endChunk()
     }
-    return mesh
   }
 }
 
 class MeshLoader {
-  static getBuffers(c: ChunkHandler) {
+  constructor(c: ChunkHandler, se: StaticEntityLoader) {
     const nameLen = c.view.getUint8(c.offset + 0)
     const name = new TextDecoder('ascii')
       .decode(new DataView(c.view.buffer, c.offset + 1, nameLen))
@@ -40,21 +49,19 @@ class MeshLoader {
     const mPrimGroup = c.view.getUint32(c.offset + 4, true)
     c.offset += 8
 
-    var primGroup
     while (c.chunksRemaining()) {
       switch (c.beginChunk()) {
         case ID.PRIMGROUP: {
-          primGroup = PrimGroupLoader.getBuffers(c)
+          new PrimGroupLoader(c, se)
         }
       }
       c.endChunk()
     }
-    return primGroup
   }
 }
 
 class PrimGroupLoader {
-  static getBuffers(c: ChunkHandler): StaticEntityBuffers {
+  constructor(c: ChunkHandler, se: StaticEntityLoader) {
     const version = c.view.getUint32(c.offset + 0, true)
     c.offset += 4
 
@@ -102,9 +109,10 @@ class PrimGroupLoader {
         case ID.MULTICOLOURLIST: { }
         case ID.UVLIST: {
           const count = c.view.getUint32(c.offset + 0, true)
+          const channel = c.view.getUint32(c.offset + 0, true)
           const size = count * 8
-          uvData = c.buffer.subarray(c.offset + 4, size, true)
-          c.offset += 4 + size
+          uvData = c.buffer.subarray(c.offset + 8, size, true)
+          c.offset += 8 + size
           break
         }
         case ID.INDEXLIST: {
@@ -123,19 +131,19 @@ class PrimGroupLoader {
       }
       c.endChunk()
     }
-    return {
-      positionData: positionData,
-      normalData: normalData,
-      colorData: colorData,
-      uvData: uvData,
-      indexData: indexData,
-    }
+
+    se.shaderName = shaderName
+    se.positionData = positionData
+    se.normalData = normalData
+    se.colorData = colorData
+    se.uvData = uvData
+    se.indexData = indexData
   }
 }
 
 const triList2Tris = (buffer: ArrayBufferSlice) => {
   const indicesIn = new Uint32Array(buffer.arrayBuffer)
-  const indicesOut = new Uint32Array((buffer.byteLength - 2) * 3)
+  const indicesOut = new Uint32Array((indicesIn.length - 2) * 3)
 
   for (let i = 0; i < indicesIn.length - 2; i++) {
     if (i % 2) {

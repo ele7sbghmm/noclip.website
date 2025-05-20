@@ -21,6 +21,9 @@ import {
 } from '../gfx/platform/GfxPlatform.js'
 
 import { Program } from './renderer.js'
+import { StaticEntityLoader, PrimGroupBuffer } from './chunks/staticEntityLoader.js'
+import { TextureIndexList } from './renderer.js'
+import { ShaderList } from './chunks/shaderLoader.js'
 
 export type StaticEntityBuffers = {
   positionData: ArrayBufferSlice,
@@ -30,44 +33,36 @@ export type StaticEntityBuffers = {
   indexData: ArrayBufferSlice,
 }
 export class StaticEntity {
+  textureMapping = [new TextureMapping]
+  texture: GfxTexture
+  sampler: GfxSampler
+
   drawCount: number
   inputLayout: GfxInputLayout
   vertexBufferDescriptors: GfxVertexBufferDescriptor[]
   indexBufferDescriptor: GfxIndexBufferDescriptor
 
+  shaderName: string
   positionDataBuffer: GfxBuffer
   normalDataBuffer: GfxBuffer
   colorDataBuffer: GfxBuffer
   uvDataBuffer: GfxBuffer
   indexDataBuffer: GfxBuffer
 
-  textureMapping = [new TextureMapping]
-  texture: GfxTexture
-  sampler: GfxSampler
-
   constructor(
     device: GfxDevice,
     renderCache: GfxRenderCache,
-    // imageData: ImageData,
-    buffers: StaticEntityBuffers
+    sampler: GfxSampler,
+    textureList: Record<string, GfxTexture>,
+    shaders: ShaderList,
+    texureList: TextureIndexList,
+    sel: StaticEntityLoader
   ) {
-    // this.sampler = renderCache.createSampler({
-    //   wrapS: GfxWrapMode.Repeat,
-    //   wrapT: GfxWrapMode.Repeat,
-    //   minFilter: GfxTexFilterMode.Bilinear,
-    //   magFilter: GfxTexFilterMode.Bilinear,
-    //   mipFilter: GfxMipFilterMode.Nearest,
-    //   minLOD: 0,
-    //   maxLOD: 1500.
-    // })
+    const texturePath = shaders[sel.shaderName].tex!
+    this.textureMapping[0].gfxSampler = sampler
+    this.textureMapping[0].gfxTexture = textureList[texturePath]
 
-    // const texture = device.createTexture(makeTextureDescriptor2D(GfxFormat.U8_RGBA_NORM, imageData.width, imageData.height, 1));
-    // device.setResourceName(texture, 'roof')
-    // device.uploadTextureData(texture, 0, [new Uint8Array(imageData.data.buffer)]);
-    // this.textureMapping[0].gfxTexture = texture
-    // this.textureMapping[0].gfxSampler = this.sampler
-    //
-    this.drawCount = buffers.positionData.byteLength / 12
+    this.drawCount = sel.indexData.byteLength / 4
 
     const vertexAttributeDescriptors = [
       { location: Program.a_Position, format: GfxFormat.F32_RGB, bufferIndex: 0, bufferByteOffset: 0 },
@@ -89,11 +84,11 @@ export class StaticEntity {
       indexBufferFormat
     })
 
-    this.positionDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, buffers.positionData.arrayBuffer)
-    this.normalDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, buffers.normalData.arrayBuffer)
-    this.colorDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, buffers.colorData.arrayBuffer)
-    this.uvDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, buffers.uvData.arrayBuffer)
-    this.indexDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Index, buffers.indexData.arrayBuffer)
+    this.positionDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, sel.positionData.arrayBuffer)
+    this.normalDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, sel.normalData.arrayBuffer)
+    this.colorDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, sel.colorData.arrayBuffer)
+    this.uvDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, sel.uvData.arrayBuffer)
+    this.indexDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Index, sel.indexData.arrayBuffer)
     this.vertexBufferDescriptors = [
       { buffer: this.positionDataBuffer, byteOffset: 0 },
       { buffer: this.normalDataBuffer, byteOffset: 0 },
@@ -114,7 +109,10 @@ export class StaticEntity {
 
     renderInst.setVertexInput(this.inputLayout, this.vertexBufferDescriptors, this.indexBufferDescriptor)
     renderInst.setDrawCount(this.drawCount)
-    // renderInst.setSamplerBindingsFromTextureMappings(this.textureMapping)
+
+    if (this.textureMapping[0].gfxTexture != undefined) {
+      renderInst.setSamplerBindingsFromTextureMappings(this.textureMapping)
+    }
 
     renderInstManager.submitRenderInst(renderInst)
   }

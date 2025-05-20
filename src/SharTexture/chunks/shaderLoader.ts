@@ -1,6 +1,9 @@
 import { ID } from './ids.js'
 import { ChunkHandler } from '../chunkHandler.js'
 
+export type ShaderParams = { 'tex': string }
+export type ShaderList = Record<string, Partial<ShaderParams>>
+
 export class ShaderLoader {
   name: string
   version: number
@@ -9,14 +12,21 @@ export class ShaderLoader {
   vertexNeeds: number
   vertexMask: number
   count: number
-  params = { 'tex': '' }
-  constructor(c: ChunkHandler) {
+  params: Partial<ShaderParams> = {}
+  constructor(c: ChunkHandler, shaderList: ShaderList) {
     const nameLen = c.view.getUint8(c.offset + 0)
-    c.offset += 1 + nameLen
+    this.name = new TextDecoder('utf-8')
+      .decode(new DataView(c.view.buffer, c.offset + 1, nameLen))
+      .replace(/\x00/g, '')
 
     this.version = c.view.getUint32(c.offset + 0, true)
-    const shaderNameLen = c.view.getUint8(c.offset + 4)
-    c.offset += 5 + shaderNameLen
+    c.offset += 5 + nameLen
+
+    const shaderNameLen = c.view.getUint8(c.offset + 0)
+    this.shaderName = new TextDecoder('utf-8')
+      .decode(new DataView(c.view.buffer, c.offset + 1, nameLen))
+      .replace(/\x00/g, '')
+    c.offset += 1 + shaderNameLen
 
     this.hasTranslucency = c.view.getUint32(c.offset + 0, true)
     this.vertexNeeds = c.view.getUint32(c.offset + 4, true)
@@ -30,10 +40,14 @@ export class ShaderLoader {
         case ID.TEXTURE_PARAM: {
           const param = c.view.getUint32(c.offset + 0, true)
           const texNameLen = c.view.getUint8(c.offset + 4)
-          this.params['tex'] = new TextDecoder('utf-8')
+          const texName = new TextDecoder('utf-8')
             .decode(new DataView(c.view.buffer, c.offset + 5, texNameLen))
             .replace(/\x00/g, '')
+            .slice(0, -4)
+
+          this.params['tex'] = texName
           c.offset += 5 + texNameLen
+
           break
         }
         case ID.INT_PARAM: { break }
@@ -44,6 +58,7 @@ export class ShaderLoader {
       }
       c.endChunk()
     }
+    shaderList[this.name] = this.params
   }
 }
 

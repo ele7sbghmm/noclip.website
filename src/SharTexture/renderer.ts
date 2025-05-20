@@ -1,8 +1,21 @@
 import * as Viewer from '../viewer.js'
+import { SceneContext } from '../SceneBase.js'
 import ArrayBufferSlice from '../ArrayBufferSlice.js'
 import { colorNewFromRGBA } from '../Color.js'
 import { DeviceProgram } from '../Program.js'
-import { GfxDevice, GfxProgram, GfxCullMode } from '../gfx/platform/GfxPlatform.js'
+import {
+  GfxDevice,
+  GfxProgram,
+  GfxCullMode,
+  GfxFormat,
+  GfxTexture,
+  GfxSampler,
+  GfxWrapMode,
+  GfxTexFilterMode,
+  GfxMipFilterMode,
+  makeTextureDescriptor2D,
+} from '../gfx/platform/GfxPlatform.js'
+import { TextureMapping } from '../TextureHolder.js'
 import { GfxRenderHelper } from '../gfx/render/GfxRenderHelper.js'
 import { GfxRenderInstList } from '../gfx/render/GfxRenderInstManager.js'
 import { GfxShaderLibrary } from '../gfx/helpers/GfxShaderLibrary.js'
@@ -11,7 +24,9 @@ import { fillMatrix4x4, fillMatrix4x3 } from '../gfx/helpers/UniformBufferHelper
 import { GfxrAttachmentSlot } from '../gfx/render/GfxRenderGraph.js'
 
 import { StaticEntity } from './staticEntity.js'
-import { Muncher } from './chunkMuncher.js'
+import { StaticEntityLoader } from './chunks/staticEntityLoader.js'
+import { ShaderList } from './chunks/shaderLoader.js'
+import { fetchPNG } from './scenes.js'
 
 export class Program extends DeviceProgram {
   static a_Position = 0
@@ -46,7 +61,7 @@ void main() {
   vec3 t_PositionWorld = UnpackMatrix(u_View) * vec4(a_Position * t_Scale, 1.);
   gl_Position = UnpackMatrix(u_Projection) * vec4(t_PositionWorld, 1.);
   v_Color = vec4(a_Color) / 255.;
-  // v_TexCoord = a_TexCoord;
+  v_TexCoord = a_TexCoord;
 }
 #endif
 
@@ -62,20 +77,70 @@ void main() {
 `
 }
 
+// type TextureIndexList = Record<string, GfxTexture>
+export type TextureIndexList = Record<string, number>
 export class Scene implements Viewer.SceneGfx {
   staticEntities: StaticEntity[]
+  staticEntityLoaders: StaticEntityLoader[] = []
+
+  shaders: ShaderList = {}
+  texturesSlice: Record<string, ArrayBufferSlice> = {}
+  texturesImageData: Record<string, ImageData> = {}
+  textureIndexList: TextureIndexList = {}
 
   renderHelper: GfxRenderHelper
   program: Program
   gfxProgram: GfxProgram | null
   renderInstListMain = new GfxRenderInstList
+  sampler: GfxSampler
+  textureList: Record<string, GfxTexture> = {}
 
-  constructor(device: GfxDevice, buffer: ArrayBufferSlice) {
+  constructor(device: GfxDevice, context: SceneContext) {
     this.createProgram()
     this.renderHelper = new GfxRenderHelper(device)
 
-    this.staticEntities = Muncher.staticEntities(device, this.renderHelper.renderCache, buffer)
+    this.sampler = this.renderHelper.renderCache.createSampler({
+      wrapS: GfxWrapMode.Repeat,
+      wrapT: GfxWrapMode.Repeat,
+      minFilter: GfxTexFilterMode.Bilinear,
+      magFilter: GfxTexFilterMode.Bilinear,
+      mipFilter: GfxMipFilterMode.Nearest,
+      minLOD: 0.,
+      maxLOD: 0.
+    })
   }
+
+  async doTextureStuff(context: SceneContext) {
+    await Promise.all(Object.keys(this.texturesSlice).map(
+      name => fetchPNG(context, `sharTexture/png/${name}.png`)
+        .then(data => this.texturesImageData[name] = data)
+    ))
+  }
+  doAfter(device: GfxDevice) {
+    for (const name in this.texturesImageData) {
+      const imageData = this.texturesImageData[name]
+      const texture = device.createTexture(
+        makeTextureDescriptor2D(GfxFormat.U8_RGBA_NORM, imageData.width, imageData.height, 1)
+      )
+      device.setResourceName(texture, name)
+      device.uploadTextureData(texture, 0, [new Uint8Array(imageData.data.buffer)])
+
+      this.textureList[name.slice(0, -4)] = texture
+    }
+
+    this.staticEntities = this.staticEntityLoaders.map(
+      sel => new StaticEntity(
+        device,
+        this.renderHelper.renderCache,
+        this.sampler,
+        this.textureList,
+        this.shaders,
+        this.textureIndexList,
+        sel
+      )
+    )
+  }
+
   createProgram() {
     this.program = new Program
     this.program.defines.set('USE_TEXTURE', '1')
@@ -111,8 +176,16 @@ export class Scene implements Viewer.SceneGfx {
   }
   render(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput) {
     const builder = this.renderHelper.renderGraph.newGraphBuilder()
-    const mainColorDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.Color0, viewerInput, makeAttachmentClearDescriptor(colorNewFromRGBA(153 / 255, 194 / 255, 221 / 255, 1.)))
-    const mainDepthDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.DepthStencil, viewerInput, standardFullClearRenderPassDescriptor)
+    const mainColorDesc = makeBackbufferDescSimple(
+      GfxrAttachmentSlot.Color0,
+      viewerInput,
+      makeAttachmentClearDescriptor(colorNewFromRGBA(153 / 255, 194 / 255, 221 / 255, 1.))
+    )
+    const mainDepthDesc = makeBackbufferDescSimple(
+      GfxrAttachmentSlot.DepthStencil,
+      viewerInput,
+      standardFullClearRenderPassDescriptor
+    )
 
     const mainColorTargetID = builder.createRenderTargetID(mainColorDesc, 'Main Color')
     const mainDepthTargetID = builder.createRenderTargetID(mainDepthDesc, 'Main Depth')
