@@ -2,7 +2,7 @@ import ArrayBufferSlice from '../ArrayBufferSlice.js'
 import { GfxRenderInstManager } from '../gfx/render/GfxRenderInstManager.js'
 import { GfxRenderCache } from '../gfx/render/GfxRenderCache.js'
 import { makeStaticDataBuffer } from '../gfx/helpers/BufferHelpers.js'
-import { TextureMapping } from '../TextureHolder.js'
+import { TextureHolder, TextureMapping } from '../TextureHolder.js'
 import {
   GfxDevice,
   GfxBuffer,
@@ -34,7 +34,6 @@ export type StaticEntityBuffers = {
 }
 export class StaticEntity {
   textureMapping = [new TextureMapping]
-  texture: GfxTexture
   sampler: GfxSampler
 
   drawCount: number
@@ -53,14 +52,15 @@ export class StaticEntity {
     device: GfxDevice,
     renderCache: GfxRenderCache,
     sampler: GfxSampler,
-    textureList: Record<string, GfxTexture>,
+    textures: Record<string, GfxTexture>,
     shaders: ShaderList,
-    texureList: TextureIndexList,
     sel: StaticEntityLoader
   ) {
     const texturePath = shaders[sel.shaderName].tex!
+    const texture = textures[texturePath]
+
     this.textureMapping[0].gfxSampler = sampler
-    this.textureMapping[0].gfxTexture = textureList[texturePath]
+    this.textureMapping[0].gfxTexture = texture
 
     this.drawCount = sel.indexData.byteLength / 4
 

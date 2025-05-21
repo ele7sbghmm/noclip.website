@@ -10,6 +10,7 @@ import { Muncher } from './chunkMuncher.js'
 import { StaticEntityLoader } from './chunks/staticEntityLoader.js'
 import { TextureLoader } from './chunks/textureLoader.js'
 
+import { pngs } from './pngs.js'
 
 class SceneDesc implements Viewer.SceneDesc {
   constructor(public id: string, public name: string) { }
@@ -18,8 +19,18 @@ class SceneDesc implements Viewer.SceneDesc {
     const buffers = [await context.dataFetcher.fetchData(`sharTexture/l7/l7z2.p3d`)]
     // const buffer = await context.dataFetcher.fetchData(`sharTexture/p3d/staticEntity.L4_l1_gens_69Shape_016.p3d_`)
     //
+    const imageDatas: Record<string, ImageData> = {}
+    await Promise.all(
+      pngs.map(path => fetchPNG(context, `sharTexture/png/${path}`)
+        .then(data => imageDatas[path] = data)
+      )
+    )
+    // await Promise.all(Object.keys(this.texturesSlice).map(
+    //   name => fetchPNG(context, `sharTexture/png/${name}.png`)
+    //     .then(data => this.texturesImageData[name] = data)
+    // ))
 
-    const scene = new Scene(device, context)
+    const scene = new Scene(device, context, imageDatas)
     new Muncher(buffers[0], scene)
     scene.doTextureStuff(context)
     scene.doAfter(device)

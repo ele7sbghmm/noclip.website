@@ -15,7 +15,7 @@ import {
   GfxMipFilterMode,
   makeTextureDescriptor2D,
 } from '../gfx/platform/GfxPlatform.js'
-import { TextureMapping } from '../TextureHolder.js'
+import { TextureHolder } from '../TextureHolder.js'
 import { GfxRenderHelper } from '../gfx/render/GfxRenderHelper.js'
 import { GfxRenderInstList } from '../gfx/render/GfxRenderInstManager.js'
 import { GfxShaderLibrary } from '../gfx/helpers/GfxShaderLibrary.js'
@@ -68,10 +68,12 @@ void main() {
 #ifdef FRAG
 void main() {
 
-// #ifdef USE_TEXTURE
-//   vec4 v_Color = texture(SAMPLER_2D(u_Texture), v_TexCoord);
-// #endif
-  gl_FragColor = v_Color;
+#ifdef USE_TEXTURE
+  vec4 t_Color = texture(SAMPLER_2D(u_Texture), v_TexCoord);
+#endif
+  // t_Color.rgb *= v.Color.rgb * 2.;
+  // t_Color.a *= v_Color.a;
+  gl_FragColor = t_Color;
 }
 #endif
 `
@@ -86,7 +88,7 @@ export class Scene implements Viewer.SceneGfx {
   shaders: ShaderList = {}
   texturesSlice: Record<string, ArrayBufferSlice> = {}
   texturesImageData: Record<string, ImageData> = {}
-  textureIndexList: TextureIndexList = {}
+  textures: Record<string, GfxTexture> = {}
 
   renderHelper: GfxRenderHelper
   program: Program
@@ -95,7 +97,8 @@ export class Scene implements Viewer.SceneGfx {
   sampler: GfxSampler
   textureList: Record<string, GfxTexture> = {}
 
-  constructor(device: GfxDevice, context: SceneContext) {
+  constructor(device: GfxDevice, context: SceneContext, imageDatas: Record<string, ImageData>) {
+    this.texturesImageData = imageDatas
     this.createProgram()
     this.renderHelper = new GfxRenderHelper(device)
 
@@ -111,10 +114,10 @@ export class Scene implements Viewer.SceneGfx {
   }
 
   async doTextureStuff(context: SceneContext) {
-    await Promise.all(Object.keys(this.texturesSlice).map(
-      name => fetchPNG(context, `sharTexture/png/${name}.png`)
-        .then(data => this.texturesImageData[name] = data)
-    ))
+    // await Promise.all(Object.keys(this.texturesSlice).map(
+    //   name => fetchPNG(context, `sharTexture/png/${name}.png`)
+    //     .then(data => this.texturesImageData[name] = data)
+    // ))
   }
   doAfter(device: GfxDevice) {
     for (const name in this.texturesImageData) {
@@ -125,7 +128,7 @@ export class Scene implements Viewer.SceneGfx {
       device.setResourceName(texture, name)
       device.uploadTextureData(texture, 0, [new Uint8Array(imageData.data.buffer)])
 
-      this.textureList[name.slice(0, -4)] = texture
+      this.textureList[name.slice(0, -8)] = texture
     }
 
     this.staticEntities = this.staticEntityLoaders.map(
@@ -135,7 +138,6 @@ export class Scene implements Viewer.SceneGfx {
         this.sampler,
         this.textureList,
         this.shaders,
-        this.textureIndexList,
         sel
       )
     )
