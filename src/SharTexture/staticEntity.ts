@@ -17,6 +17,13 @@ import {
   GfxWrapMode,
   GfxTexFilterMode,
   GfxMipFilterMode,
+  GfxCullMode,
+  GfxAttachmentState,
+  GfxChannelBlendState,
+  GfxChannelWriteMask,
+  GfxBlendMode,
+  GfxBlendFactor,
+  GfxMegaStateDescriptor,
   makeTextureDescriptor2D
 } from '../gfx/platform/GfxPlatform.js'
 
@@ -33,6 +40,8 @@ export type StaticEntityBuffers = {
   indexData: ArrayBufferSlice,
 }
 export class StaticEntity {
+  sortKeyIndex: number
+
   textureMapping = [new TextureMapping]
   sampler: GfxSampler
 
@@ -48,19 +57,27 @@ export class StaticEntity {
   uvDataBuffer: GfxBuffer
   indexDataBuffer: GfxBuffer
 
+  megaStateFlags: Partial<GfxMegaStateDescriptor>
+
   constructor(
     device: GfxDevice,
     renderCache: GfxRenderCache,
     sampler: GfxSampler,
     textures: Record<string, GfxTexture>,
     shaders: ShaderList,
-    sel: StaticEntityLoader
+    sel: StaticEntityLoader,
+    sortKeyIndex: number
   ) {
-    const texturePath = shaders[sel.shaderName].tex!
-    const texture = textures[texturePath]
+    this.sortKeyIndex = sortKeyIndex
 
-    this.textureMapping[0].gfxSampler = sampler
-    this.textureMapping[0].gfxTexture = texture
+    const shader = shaders[sel.shaderName]
+    if ('TEX' in shader) {
+      const texturePath = shader['TEX']!
+      const texture = textures[texturePath]
+
+      this.textureMapping[0].gfxSampler = sampler
+      this.textureMapping[0].gfxTexture = texture
+    }
 
     this.drawCount = sel.indexData.byteLength / 4
 
@@ -96,6 +113,33 @@ export class StaticEntity {
       { buffer: this.uvDataBuffer, byteOffset: 0 }
     ]
     this.indexBufferDescriptor = { buffer: this.indexDataBuffer, byteOffset: 0 }
+
+    this.megaStateFlags = {
+      attachmentsState: [{
+        channelWriteMask: GfxChannelWriteMask.RGB,
+        rgbBlendState: {
+          blendMode: GfxBlendMode.Add,
+          // blendSrcFactor: GfxBlendFactor.One,
+          // blendDstFactor: GfxBlendFactor.Zero
+          blendSrcFactor: GfxBlendFactor.SrcAlpha,
+          blendDstFactor: GfxBlendFactor.OneMinusSrcAlpha
+        },
+        alphaBlendState: {
+          blendMode: GfxBlendMode.Add,
+          blendSrcFactor: GfxBlendFactor.One,
+          blendDstFactor: GfxBlendFactor.Zero
+        }
+      }],
+      depthCompare: undefined,
+      depthWrite: undefined,
+      stencilCompare: undefined,
+      stencilWrite: undefined,
+      stencilPassOp: undefined,
+      cullMode: GfxCullMode.None,
+      frontFace: undefined,
+      polygonOffset: undefined,
+      wireframe: false
+    }
   }
   destroy(device: GfxDevice) {
     device.destroyBuffer(this.positionDataBuffer)
@@ -109,6 +153,8 @@ export class StaticEntity {
 
     renderInst.setVertexInput(this.inputLayout, this.vertexBufferDescriptors, this.indexBufferDescriptor)
     renderInst.setDrawCount(this.drawCount)
+    renderInst.setMegaStateFlags(this.megaStateFlags)
+    renderInst.sortKey = this.sortKeyIndex
 
     if (this.textureMapping[0].gfxTexture != undefined) {
       renderInst.setSamplerBindingsFromTextureMappings(this.textureMapping)

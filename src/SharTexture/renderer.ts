@@ -61,18 +61,19 @@ void main() {
   vec3 t_PositionWorld = UnpackMatrix(u_View) * vec4(a_Position * t_Scale, 1.);
   gl_Position = UnpackMatrix(u_Projection) * vec4(t_PositionWorld, 1.);
   v_Color = vec4(a_Color) / 255.;
-  v_TexCoord = a_TexCoord;
+  // v_TexCoord = a_TexCoord;
+  v_TexCoord = vec2(a_TexCoord.x, 1. - a_TexCoord.y);
 }
 #endif
 
 #ifdef FRAG
 void main() {
-
+  vec4 t_Color = vec4(1., 1., 1., 1.);
 #ifdef USE_TEXTURE
-  vec4 t_Color = texture(SAMPLER_2D(u_Texture), v_TexCoord);
+  t_Color = texture(SAMPLER_2D(u_Texture), v_TexCoord);
 #endif
-  // t_Color.rgb *= v.Color.rgb * 2.;
-  // t_Color.a *= v_Color.a;
+  t_Color.rgb *= v_Color.rgb;
+  t_Color.a = v_Color.a;
   gl_FragColor = t_Color;
 }
 #endif
@@ -97,8 +98,7 @@ export class Scene implements Viewer.SceneGfx {
   sampler: GfxSampler
   textureList: Record<string, GfxTexture> = {}
 
-  constructor(device: GfxDevice, context: SceneContext, imageDatas: Record<string, ImageData>) {
-    this.texturesImageData = imageDatas
+  constructor(device: GfxDevice, context: SceneContext) {
     this.createProgram()
     this.renderHelper = new GfxRenderHelper(device)
 
@@ -112,12 +112,23 @@ export class Scene implements Viewer.SceneGfx {
       maxLOD: 0.
     })
   }
-
-  async doTextureStuff(context: SceneContext) {
-    // await Promise.all(Object.keys(this.texturesSlice).map(
-    //   name => fetchPNG(context, `sharTexture/png/${name}.png`)
-    //     .then(data => this.texturesImageData[name] = data)
-    // ))
+  arrayBs(bufferLike: ArrayBufferLike) {
+    if (bufferLike instanceof ArrayBuffer) {
+      return bufferLike
+    }
+    const arrayBuffer = new ArrayBuffer(bufferLike.byteLength)
+    const srcView = new Uint8Array(bufferLike)
+    const dstView = new Uint8Array(arrayBuffer)
+    dstView.set(srcView)
+    return arrayBuffer
+  }
+  async doTextureStuff() {
+    this.texturesImageData = Object.fromEntries(await Promise.all(
+      Object.entries(this.texturesSlice).map(async ([path, slc]) => {
+        const data = await fetchPNG(this.arrayBs(slc.arrayBuffer))
+        return [path, data]
+      })
+    ))
   }
   doAfter(device: GfxDevice) {
     for (const name in this.texturesImageData) {
@@ -128,19 +139,23 @@ export class Scene implements Viewer.SceneGfx {
       device.setResourceName(texture, name)
       device.uploadTextureData(texture, 0, [new Uint8Array(imageData.data.buffer)])
 
-      this.textureList[name.slice(0, -8)] = texture
+      this.textureList[name.slice(0, -4)] = texture
     }
 
-    this.staticEntities = this.staticEntityLoaders.map(
-      sel => new StaticEntity(
+    this.staticEntities = []
+    for (let i = 0; i < this.staticEntityLoaders.length; i++) {
+      const sel = this.staticEntityLoaders[i]
+      const se = new StaticEntity(
         device,
         this.renderHelper.renderCache,
         this.sampler,
         this.textureList,
         this.shaders,
-        sel
+        sel,
+        i
       )
-    )
+      this.staticEntities.push(se)
+    }
   }
 
   createProgram() {

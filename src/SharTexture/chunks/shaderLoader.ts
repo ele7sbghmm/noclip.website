@@ -1,7 +1,7 @@
 import { ID } from './ids.js'
 import { ChunkHandler } from '../chunkHandler.js'
 
-export type ShaderParams = { 'tex': string }
+export type ShaderParams = Record<string, string | number>
 export type ShaderList = Record<string, Partial<ShaderParams>>
 
 export class ShaderLoader {
@@ -38,14 +38,16 @@ export class ShaderLoader {
       switch (c.beginChunk()) {
         case ID.SHADER_DEFINITION: { break }
         case ID.TEXTURE_PARAM: {
-          const param = c.view.getUint32(c.offset + 0, true)
+          const param = new TextDecoder('utf-8')
+            .decode(new DataView(c.view.buffer, c.offset + 0, 4))
+            .replace(/\x00/g, '')
           const texNameLen = c.view.getUint8(c.offset + 4)
           const texName = new TextDecoder('utf-8')
             .decode(new DataView(c.view.buffer, c.offset + 5, texNameLen))
             .replace(/\x00/g, '')
             .slice(0, -4)
 
-          this.params['tex'] = texName
+          this.params[param] = texName
           c.offset += 5 + texNameLen
 
           break

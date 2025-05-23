@@ -9,23 +9,28 @@ import { ShaderList, ShaderParams } from './chunks/shaderLoader.js'
 import { Scene } from './renderer.js'
 
 export class Muncher {
-  constructor(buffer: ArrayBufferSlice, scene: Scene) {
-    const c = new ChunkHandler(buffer)
-    c.p3dChunk()
+  constructor(buffers: ArrayBufferSlice[], scene: Scene) {
+    buffers.forEach(buffer =>{
+      const c = new ChunkHandler(buffer)
+      c.p3dChunk()
 
-    while (c.chunksRemaining()) {
-      switch (c.beginChunk()) {
-        case ID.ENTITY_DSG: {
-          scene.staticEntityLoaders.push(new StaticEntityLoader(c))
+      while (c.chunksRemaining()) {
+        switch (c.beginChunk()) {
+          case ID.ENTITY_DSG: {
+            scene.staticEntityLoaders.push(new StaticEntityLoader(c))
+            break
+          }
+          case ID.TEXTURE: {
+            new TextureLoader(c, scene.texturesSlice)
+            break
+          }
+          case ID.SHADER: {
+            new ShaderLoader(c, scene.shaders)
+            break
+          }
         }
-        case ID.TEXTURE: {
-          new TextureLoader(c, scene.texturesSlice)
-        }
-        case ID.SHADER: {
-          new ShaderLoader(c, scene.shaders)
-        }
+        c.endChunk()
       }
-      c.endChunk()
-    }
+    })
   }
 }
