@@ -1,12 +1,69 @@
 import * as Viewer from '../viewer.js'
 import { SceneContext } from '../SceneBase.js'
+import { Color, colorNewFromRGBA } from '../Color.js'
 import { GfxDevice } from '../gfx/platform/GfxPlatform.js'
 
 import { Scene } from './renderer.js'
 import { Muncher } from './chunkMuncher.js'
 
+class SceneDesc implements Viewer.SceneDesc {
+  constructor(public id: string, public name: string, public path: string) { }
+  async createScene(device: GfxDevice, context: SceneContext) {
+    const buffers = await Promise.all(paths[this.id].map(async (fileName) => {
+      return await context.dataFetcher.fetchData(`${this.path}/${fileName}.p3d`)
+    }))
+
+    const scene = new Scene(device, context)
+    new Muncher(buffers, scene)
+    await scene.doTextureStuff()
+    scene.doAfter(device)
+
+    return scene
+  }
+}
+
+const id = "shar texture"
+const name = "shar texture"
+const path = 'sharTexture/art__'
+const sceneDescs = [
+  new SceneDesc('Level 1', 'Suburbs Day', path),
+  new SceneDesc('Level 2', 'Downtown Day', path),
+  new SceneDesc('Level 3', 'Seaside Sunset', path),
+  new SceneDesc('Level 4', 'Suburbs Night', path),
+  new SceneDesc('Level 5', 'Downtown Dusk', path),
+  new SceneDesc('Level 6', 'Seaside Twilight', path),
+  new SceneDesc('Level 7', 'Suburbs Halloween', path),
+  new SceneDesc('fmc', 'Fully Connected Map', 'sharTexture/fmc'),
+  new SceneDesc('l1z1', 'l1z1', path),
+  new SceneDesc('l3r1', 'l3r1', path),
+]
+
+export const sceneGroup = { id, name, sceneDescs }
+
+export function fetchPNG(buffer: ArrayBuffer): Promise<ImageData> {
+  // path = context.dataFetcher.getDataURLForPath(path)
+  const blob = new Blob([buffer], { type: 'image/png' })
+  const url = URL.createObjectURL(blob)
+
+  const img = document.createElement('img')
+  img.crossOrigin = 'anonymous'
+  img.src = url
+  const p = new Promise<ImageData>((resolve) => {
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0)
+      resolve(ctx.getImageData(0, 0, img.width, img.height))
+    }
+  })
+  return p
+}
 
 const paths: Record<string, string[]> = {
+  'l1z1': ['l1z1'],
+  'l3r1': ['l3r1'],
   'Level 1': [
     'L1_TERRA',
     'l1i00',
@@ -47,11 +104,11 @@ const paths: Record<string, string[]> = {
     'l3r1',
     'l3z2',
     'l3r2',
-    // 'l3z3',
+    'l3z3', // lambert1 shader undefined && vb too small for draw call
     'l3r3',
     'l3z4',
     'l3r4',
-    // 'l3z5',
+    'l3z5', // vb too small for draw call
     'l3r5',
     'l3r5_dam'
   ],
@@ -92,15 +149,15 @@ const paths: Record<string, string[]> = {
     'l6_TERRA',
     'l6i05',
     'l6i06',
-    'l6z1',
+    'l6z1', // lambert1 shader undefined && vb too small for draw call
     'l6r1',
     'l6z2',
     'l6r2',
-    'l6z3',
+    'l6z3', // lambert1 shader undefined && vb too small for draw call
     'l6r3',
     'l6z4',
     'l6r4',
-    'l6z5',
+    'l6z5', // vb too small for draw call
     'l6r5',
     'l6r5_dam'
   ],
@@ -108,7 +165,7 @@ const paths: Record<string, string[]> = {
     'L7_TERRA',
     'l7i00',
     'l7i01',
-    'l7i02',
+    'l7i02', // vb too small for draw call
     'l7i07',
     'l7z1',
     'l7r1',
@@ -120,58 +177,48 @@ const paths: Record<string, string[]> = {
     'l7r6',
     'l7z7',
     'l7r7',
+  ],
+  'fmc': [
+    'L1_TERRA',
+    'l1i00',
+    'l1i01',
+    'l1i02',
+    // 'l1r1',
+    'l1r2',
+    'l1r3',
+    // 'l1r4a',
+    // 'l1r4b',
+    // 'l1r6',
+    // 'l1z1',
+    'l1z2',
+    'l1z3',
+    // 'l1z4',
+    // 'l1z6',
+    // 'l1z7',
+    // 'l1r7',
+    'l2i03',
+    'l2i04',
+    'l2r1',
+    'l2r2',
+    'l2r3',
+    'l2r4',
+    'l2skybox',
+    'l2z1',
+    'l2z2',
+    'l2z3',
+    'l2z4',
+    'l3i05',
+    'l3i06',
+    'l3r1',
+    'l3r2',
+    'l3r3',
+    'l3r4',
+    'l3r5_dam',
+    'l3r5',
+    'l3z1',
+    'l3z2',
+    'l3z3',
+    'l3z4',
+    'l3z5',
   ]
 }
-
-
-class SceneDesc implements Viewer.SceneDesc {
-  constructor(public id: string, public name: string) { }
-  async createScene(device: GfxDevice, context: SceneContext) {
-    const buffers = await Promise.all(paths[this.id].map(async (fileName) => {
-      return await context.dataFetcher.fetchData(`sharTexture/art/${fileName}.p3d`)
-    }))
-   
-    const scene = new Scene(device, context)
-    new Muncher(buffers, scene)
-    await scene.doTextureStuff()
-    scene.doAfter(device)
-
-    return scene
-  }
-}
-
-const id = "shar texture"
-const name = "shar texture"
-const sceneDescs = [
-  new SceneDesc('Level 1', 'Suburbs Day'),
-  new SceneDesc('Level 2', 'Downtown Day'),
-  new SceneDesc('Level 3', 'Seaside Sunset'),
-  new SceneDesc('Level 4', 'Suburbs Night'),
-  new SceneDesc('Level 5', 'Downtown Night'),
-  new SceneDesc('Level 6', 'Seaside Twilight'),
-  new SceneDesc('Level 7', 'Suburbs Halloween')
-]
-
-export const sceneGroup = { id, name, sceneDescs }
-
-export function fetchPNG(buffer: ArrayBuffer): Promise<ImageData> {
-  // path = context.dataFetcher.getDataURLForPath(path)
-  const blob = new Blob([buffer], { type: 'image/png'})
-  const url = URL.createObjectURL(blob)
-
-  const img = document.createElement('img')
-  img.crossOrigin = 'anonymous'
-  img.src = url
-  const p = new Promise<ImageData>((resolve) => {
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(img, 0, 0)
-      resolve(ctx.getImageData(0, 0, img.width, img.height))
-    }
-  })
-  return p
-}
-

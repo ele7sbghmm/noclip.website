@@ -1,7 +1,10 @@
+import { mat4, vec3 } from 'gl-matrix'
+import { Color, colorNewFromRGBA } from '../../Color.js'
+
 import { ID } from './ids.js'
 import { ChunkHandler } from '../chunkHandler.js'
 
-export type ShaderParams = Record<string, string | number>
+export type ShaderParams = Record<string, string | number | Color | vec3 | mat4>
 export type ShaderList = Record<string, Partial<ShaderParams>>
 
 export class ShaderLoader {
@@ -14,19 +17,12 @@ export class ShaderLoader {
   count: number
   params: Partial<ShaderParams> = {}
   constructor(c: ChunkHandler, shaderList: ShaderList) {
-    const nameLen = c.view.getUint8(c.offset + 0)
-    this.name = new TextDecoder('utf-8')
-      .decode(new DataView(c.view.buffer, c.offset + 1, nameLen))
-      .replace(/\x00/g, '')
+    this.name = c.pString()
 
     this.version = c.view.getUint32(c.offset + 0, true)
-    c.offset += 5 + nameLen
+    c.offset += 4
 
-    const shaderNameLen = c.view.getUint8(c.offset + 0)
-    this.shaderName = new TextDecoder('utf-8')
-      .decode(new DataView(c.view.buffer, c.offset + 1, nameLen))
-      .replace(/\x00/g, '')
-    c.offset += 1 + shaderNameLen
+    this.shaderName = c.pString()
 
     this.hasTranslucency = c.view.getUint32(c.offset + 0, true)
     this.vertexNeeds = c.view.getUint32(c.offset + 4, true)
@@ -39,24 +35,62 @@ export class ShaderLoader {
         case ID.SHADER_DEFINITION: { break }
         case ID.TEXTURE_PARAM: {
           const param = new TextDecoder('utf-8')
-            .decode(new DataView(c.view.buffer, c.offset + 0, 4))
+            .decode(new DataView(c.view.buffer, c.offset, 4))
             .replace(/\x00/g, '')
-          const texNameLen = c.view.getUint8(c.offset + 4)
-          const texName = new TextDecoder('utf-8')
-            .decode(new DataView(c.view.buffer, c.offset + 5, texNameLen))
-            .replace(/\x00/g, '')
-            .slice(0, -4)
+          c.offset += 4
 
+          const texName = c.pString().slice(0, -4)
           this.params[param] = texName
-          c.offset += 5 + texNameLen
+        } break
+        case ID.INT_PARAM: {
+          const param = new TextDecoder('utf-8')
+            .decode(new DataView(c.view.buffer, c.offset, 4))
+            .replace(/\x00/g, '')
+          c.offset += 4
 
-          break
-        }
-        case ID.INT_PARAM: { break }
-        case ID.FLOAT_PARAM: { break }
-        case ID.COLOUR_PARAM: { break }
-        case ID.VECTOR_PARAM: { break }
-        case ID.MATRIX_PARAM: { break }
+          this.params[param] = c.u32()
+        } break
+        case ID.FLOAT_PARAM: {
+          const param = new TextDecoder('utf-8')
+            .decode(new DataView(c.view.buffer, c.offset, 4))
+            .replace(/\x00/g, '')
+          c.offset += 4
+
+          this.params[param] = c.f32()
+        } break
+        case ID.COLOUR_PARAM: {
+          const param = new TextDecoder('utf-8')
+            .decode(new DataView(c.view.buffer, c.offset, 4))
+            .replace(/\x00/g, '')
+          c.offset += 4
+
+          const r = c.u8() / 255.
+          const g = c.u8() / 255.
+          const b = c.u8() / 255.
+          const a = c.u8() / 255.
+          this.params[param] = colorNewFromRGBA(r, g, b, a)
+        } break
+        case ID.VECTOR_PARAM: {
+          const param = new TextDecoder('utf-8')
+            .decode(new DataView(c.view.buffer, c.offset, 4))
+            .replace(/\x00/g, '')
+          c.offset += 4
+
+          this.params[param] = vec3.fromValues(c.f32(), c.f32(), c.f32())
+        } break
+        case ID.MATRIX_PARAM: {
+          const param = new TextDecoder('utf-8')
+            .decode(new DataView(c.view.buffer, c.offset, 4))
+            .replace(/\x00/g, '')
+          c.offset += 4
+
+          this.params[param] = mat4.fromValues(
+            c.f32(), c.f32(), c.f32(), c.f32(),
+            c.f32(), c.f32(), c.f32(), c.f32(),
+            c.f32(), c.f32(), c.f32(), c.f32(),
+            c.f32(), c.f32(), c.f32(), c.f32()
+          )
+        } break
       }
       c.endChunk()
     }

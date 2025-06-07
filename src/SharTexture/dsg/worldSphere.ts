@@ -1,8 +1,11 @@
-import ArrayBufferSlice from '../ArrayBufferSlice.js'
-import { GfxRenderInstManager } from '../gfx/render/GfxRenderInstManager.js'
-import { GfxRenderCache } from '../gfx/render/GfxRenderCache.js'
-import { makeStaticDataBuffer } from '../gfx/helpers/BufferHelpers.js'
-import { TextureHolder, TextureMapping } from '../TextureHolder.js'
+import { mat4 } from 'gl-matrix'
+import ArrayBufferSlice from '../../ArrayBufferSlice.js'
+import * as Viewer from '../../viewer.js'
+import { GfxRenderInstManager } from '../../gfx/render/GfxRenderInstManager.js'
+import { GfxRenderCache } from '../../gfx/render/GfxRenderCache.js'
+import { makeStaticDataBuffer } from '../../gfx/helpers/BufferHelpers.js'
+import { TextureHolder, TextureMapping } from '../../TextureHolder.js'
+import { fillMatrix4x4 } from '../../gfx/helpers/UniformBufferHelpers.js'
 import {
   GfxDevice,
   GfxBuffer,
@@ -14,6 +17,8 @@ import {
   GfxBufferUsage,
   GfxTexture,
   GfxSampler,
+  makeTextureDescriptor2D,
+  GfxStencilOp,
   GfxWrapMode,
   GfxTexFilterMode,
   GfxMipFilterMode,
@@ -24,23 +29,18 @@ import {
   GfxBlendMode,
   GfxBlendFactor,
   GfxMegaStateDescriptor,
-  makeTextureDescriptor2D
-} from '../gfx/platform/GfxPlatform.js'
+  GfxCompareMode,
+  GfxFrontFaceMode
+} from '../../gfx/platform/GfxPlatform.js'
 
-import { Program } from './renderer.js'
-import { StaticEntityLoader, PrimGroupBuffer } from './chunks/staticEntityLoader.js'
-import { TextureIndexList } from './renderer.js'
-import { ShaderList } from './chunks/shaderLoader.js'
+import { Program } from '../renderer.js'
+import { WorldSphereLoader } from '../chunks/worldSphereLoader.js'
+import { ShaderList } from '../chunks/shaderLoader.js'
+import { IEntityDSG } from '../chunkHandler.js'
+import { reverseDepthForCompareMode, defaultBlendState, defaultMegaState } from '../util.js'
 
-export type StaticEntityBuffers = {
-  positionData: ArrayBufferSlice,
-  normalData: ArrayBufferSlice,
-  colorData: ArrayBufferSlice,
-  uvData: ArrayBufferSlice,
-  indexData: ArrayBufferSlice,
-}
-export class StaticEntity {
-  sortKeyIndex: number
+export class WorldSphereDSG extends IEntityDSG {
+  static n = 0
 
   textureMapping = [new TextureMapping]
   sampler: GfxSampler
@@ -50,35 +50,65 @@ export class StaticEntity {
   vertexBufferDescriptors: GfxVertexBufferDescriptor[]
   indexBufferDescriptor: GfxIndexBufferDescriptor
 
-  shaderName: string
   positionDataBuffer: GfxBuffer
   normalDataBuffer: GfxBuffer
   colorDataBuffer: GfxBuffer
   uvDataBuffer: GfxBuffer
   indexDataBuffer: GfxBuffer
 
-  megaStateFlags: Partial<GfxMegaStateDescriptor>
+  megaStateFlags: GfxMegaStateDescriptor
 
+  textureFound: boolean = false
+  alphaTest: boolean = false
   constructor(
     device: GfxDevice,
     renderCache: GfxRenderCache,
     sampler: GfxSampler,
     textures: Record<string, GfxTexture>,
     shaders: ShaderList,
-    sel: StaticEntityLoader,
-    sortKeyIndex: number
+    sel: IEntityDSG
   ) {
-    this.sortKeyIndex = sortKeyIndex
+    super()
+    this.boundingBox = sel.boundingBox
+    this.boundingSphere = sel.boundingSphere
 
+    this.megaStateFlags = defaultMegaState
     const shader = shaders[sel.shaderName]
-    if ('TEX' in shader) {
-      const texturePath = shader['TEX']!
-      const texture = textures[texturePath]
+    if (shader != undefined) {
+      if ('TEX' in shader) {
+        const textureName = shader['TEX']
+        let texture: GfxTexture | null = null
+        if (typeof textureName === 'string') {
+          texture = textures[textureName]
+          if (texture) {
+            this.textureFound = true
 
-      this.textureMapping[0].gfxSampler = sampler
-      this.textureMapping[0].gfxTexture = texture
+            this.textureMapping[0].gfxSampler = sampler
+            this.textureMapping[0].gfxTexture = texture
+          }
+        }
+
+        this.translucent = sel.translucent
+        this.castsShadow = sel.castsShadow
+      }
+
+      // if ('2SID' in shader)
+      //   this.megaStateFlags.cullMode = !shader['2SID'] ? GfxCullMode.None : GfxCullMode.Front
+      
+      if ('ATST' in shader) {
+        this.alphaTest = !!shader['ATST']
+
+        this.megaStateFlags.attachmentsState = [{
+          channelWriteMask: GfxChannelWriteMask.RGB,
+          rgbBlendState: {
+            blendMode: GfxBlendMode.Add,
+            blendSrcFactor: this.alphaTest ? GfxBlendFactor.One : GfxBlendFactor.SrcAlpha,
+            blendDstFactor: this.alphaTest ? GfxBlendFactor.Zero : GfxBlendFactor.OneMinusSrcAlpha
+          },
+          alphaBlendState: defaultBlendState
+        }]
+      }
     }
-
     this.drawCount = sel.indexData.byteLength / 4
 
     const vertexAttributeDescriptors = [
@@ -113,33 +143,6 @@ export class StaticEntity {
       { buffer: this.uvDataBuffer, byteOffset: 0 }
     ]
     this.indexBufferDescriptor = { buffer: this.indexDataBuffer, byteOffset: 0 }
-
-    this.megaStateFlags = {
-      attachmentsState: [{
-        channelWriteMask: GfxChannelWriteMask.RGB,
-        rgbBlendState: {
-          blendMode: GfxBlendMode.Add,
-          // blendSrcFactor: GfxBlendFactor.One,
-          // blendDstFactor: GfxBlendFactor.Zero
-          blendSrcFactor: GfxBlendFactor.SrcAlpha,
-          blendDstFactor: GfxBlendFactor.OneMinusSrcAlpha
-        },
-        alphaBlendState: {
-          blendMode: GfxBlendMode.Add,
-          blendSrcFactor: GfxBlendFactor.One,
-          blendDstFactor: GfxBlendFactor.Zero
-        }
-      }],
-      depthCompare: undefined,
-      depthWrite: undefined,
-      stencilCompare: undefined,
-      stencilWrite: undefined,
-      stencilPassOp: undefined,
-      cullMode: GfxCullMode.None,
-      frontFace: undefined,
-      polygonOffset: undefined,
-      wireframe: false
-    }
   }
   destroy(device: GfxDevice) {
     device.destroyBuffer(this.positionDataBuffer)
@@ -149,18 +152,25 @@ export class StaticEntity {
     device.destroyBuffer(this.indexDataBuffer)
   }
   prepareToRender(renderInstManager: GfxRenderInstManager) {
+    const template = renderInstManager.pushTemplate()
+
+    let offs = template.allocateUniformBuffer(Program.ub_ModelParams, 16)
+    const mapped = template.mapUniformBufferF32(Program.ub_ModelParams)
+
+    offs += fillMatrix4x4(mapped, offs, this.matrix)
+
     const renderInst = renderInstManager.newRenderInst()
 
     renderInst.setVertexInput(this.inputLayout, this.vertexBufferDescriptors, this.indexBufferDescriptor)
     renderInst.setDrawCount(this.drawCount)
     renderInst.setMegaStateFlags(this.megaStateFlags)
-    renderInst.sortKey = this.sortKeyIndex
 
     if (this.textureMapping[0].gfxTexture != undefined) {
       renderInst.setSamplerBindingsFromTextureMappings(this.textureMapping)
     }
 
     renderInstManager.submitRenderInst(renderInst)
+    renderInstManager.popTemplate()
   }
 }
 

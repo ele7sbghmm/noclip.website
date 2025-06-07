@@ -1,58 +1,57 @@
+import { vec3 } from 'gl-matrix'
 import ArrayBufferSlice from '../../ArrayBufferSlice.js'
+
+import { ChunkHandler, IEntityDSG, BoundingBox, BoundingSphere } from '../chunkHandler.js'
 import { ID } from './ids.js'
-import { ChunkHandler } from '../chunkHandler.js'
-import { StaticEntityBuffers } from '../staticEntity.js'
 
-export type PrimGroupBuffer = {
-}
 export class StaticEntityLoader {
-  name: string
-  shaderName: string
-  positionData: ArrayBufferSlice
-  normalData: ArrayBufferSlice
-  colorData: ArrayBufferSlice
-  uvData: ArrayBufferSlice
-  indexData: ArrayBufferSlice
-
+  staticEntities: IEntityDSG[] = []
   constructor(c: ChunkHandler) {
-    const nameLen = c.view.getUint8(c.offset + 0)
-    this.name = new TextDecoder('ascii')
-      .decode(new DataView(c.view.buffer, c.offset + 1, nameLen))
-      .replace(/\x00/g, '')
-    c.offset += 1 + nameLen
+    const inst = new IEntityDSG
+    inst.name = c.pString()
 
-    const version = c.view.getUint32(c.offset + 0, true)
-    const hasAlpha = c.view.getUint32(c.offset + 4, true)
-    c.offset += 8
+    const version = c.u32()
+    const hasAlpha = c.u32()
+    inst.translucent = !!hasAlpha
 
-    var mesh
     while (c.chunksRemaining()) {
       switch (c.beginChunk()) {
         case ID.MESH: {
-          new MeshLoader(c, this)
-        }
+          new MeshLoader(c, inst)
+          this.staticEntities.push(inst)
+        } break
       }
       c.endChunk()
     }
   }
 }
 
-class MeshLoader {
-  constructor(c: ChunkHandler, se: StaticEntityLoader) {
-    const nameLen = c.view.getUint8(c.offset + 0)
-    const name = new TextDecoder('ascii')
-      .decode(new DataView(c.view.buffer, c.offset + 1, nameLen))
-      .replace(/\x00/g, '')
-    c.offset += 1 + nameLen
+export class MeshLoader {
+  constructor(c: ChunkHandler, entity: IEntityDSG) {
+    const name = c.pString()
 
-    const version = c.view.getUint32(c.offset + 0, true)
-    const mPrimGroup = c.view.getUint32(c.offset + 4, true)
-    c.offset += 8
+    const version = c.u32()
+    const mPrimGroup = c.u32()
 
     while (c.chunksRemaining()) {
       switch (c.beginChunk()) {
         case ID.PRIMGROUP: {
-          new PrimGroupLoader(c, se)
+          new PrimGroupLoader(c, entity)
+        } break
+        case ID.BOX: {
+          entity.boundingBox = {
+            mn: c.vec3(),
+            mx: c.vec3()
+          }
+        } break
+        case ID.SPHERE: {
+          entity.boundingSphere = {
+            c: c.vec3(),
+            r: c.f32()
+          }
+        } break
+        case ID.RENDERSTATUS: {
+          entity.castsShadow = c.u32() == 0
         }
       }
       c.endChunk()
@@ -61,21 +60,17 @@ class MeshLoader {
 }
 
 class PrimGroupLoader {
-  constructor(c: ChunkHandler, se: StaticEntityLoader) {
+  constructor(c: ChunkHandler, entity: IEntityDSG) {
     const version = c.view.getUint32(c.offset + 0, true)
     c.offset += 4
 
-    const shaderNameLen = c.view.getUint8(c.offset + 0)
-    const shaderName = new TextDecoder('ascii')
-      .decode(new DataView(c.view.buffer, c.offset + 1, shaderNameLen))
-      .replace(/\x00/g, '')
-    c.offset += 1 + shaderNameLen
+    const shaderName = c.pString()
 
-    const mPrimType = c.view.getUint32(c.offset + 0, true)
-    const mVertexFormat = c.view.getUint32(c.offset + 4, true)
-    const mVertexCount = c.view.getUint32(c.offset + 8, true)
-    const mIndexCount = c.view.getUint32(c.offset + 12, true)
-    const mMatrixCount = c.view.getUint32(c.offset + 16, true)
+    const primType = c.view.getUint32(c.offset + 0, true)
+    const vertexFormat = c.view.getUint32(c.offset + 4, true)
+    const vertexCount = c.view.getUint32(c.offset + 8, true)
+    const indexCount = c.view.getUint32(c.offset + 12, true)
+    const matrixCount = c.view.getUint32(c.offset + 16, true)
     c.offset += 20
 
     let positionData = new ArrayBufferSlice(new Uint32Array().buffer)
@@ -90,54 +85,49 @@ class PrimGroupLoader {
           const size = count * 12
           positionData = c.buffer.subarray(c.offset + 4, size, true)
           c.offset += 4 + size
-          break
-        }
+        } break
         case ID.NORMALLIST: {
           const count = c.view.getUint32(c.offset + 0, true)
           const size = count * 12
           normalData = c.buffer.subarray(c.offset + 4, size, true)
           c.offset += 4 + size
-          break
-        }
+        } break
         case ID.COLOURLIST: {
           const count = c.view.getUint32(c.offset + 0, true)
           const size = count * 4
           colorData = c.buffer.subarray(c.offset + 4, size, true)
           c.offset += 4 + size
-          break
-        }
-        case ID.MULTICOLOURLIST: { }
+        } break
+        case ID.MULTICOLOURLIST: { } break
         case ID.UVLIST: {
           const count = c.view.getUint32(c.offset + 0, true)
           const channel = c.view.getUint32(c.offset + 0, true)
           const size = count * 8
           uvData = c.buffer.subarray(c.offset + 8, size, true)
           c.offset += 8 + size
-          break
-        }
+        } break
         case ID.INDEXLIST: {
           const count = c.view.getUint32(c.offset + 0, true)
           const size = count * 4
           indexData = c.buffer.subarray(c.offset + 4, size, true)
           c.offset += 4 + size
 
-          if (mPrimType == 1) {
+          if (primType == 1) {
             indexData = triList2Tris(indexData)
           }
-          break
-        }
-        case ID.WEIGHTLIST: { break }
-        case ID.MATRIXLIST: { break }
+        } break
+        case ID.WEIGHTLIST: { } break
+        case ID.MATRIXLIST: { } break
       }
       c.endChunk()
     }
 
-    se.shaderName = shaderName
-    se.positionData = positionData
-    se.normalData = normalData
-    se.colorData = colorData
-    se.uvData = uvData
-    se.indexData = indexData
+    entity.shaderName = shaderName
+    entity.positionData = positionData
+    entity.normalData = normalData
+    entity.colorData = colorData
+    entity.uvData = uvData
+    entity.indexData = indexData
   }
 }
 

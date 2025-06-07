@@ -1,0 +1,229 @@
+import { vec3, mat4 } from 'gl-matrix'
+
+import { ChunkHandler } from '../chunkHandler.js'
+import { ID } from '../id.js'
+
+export class StatPhys {
+  LoadObject(c: ChunkHandler) {
+    let pos: number[] = []
+    let nrm: number[] = []
+
+    const name = c.pstr()
+
+    const shadowName = null
+
+    const version = c.u32()
+
+    while (c.remaining()) {
+      switch (c.begin()) {
+        case ID.OBJECT: {
+          const [p, n] = new CollisionObject().LoadObject(c)
+          pos = pos.concat(p)
+          nrm = nrm.concat(n)
+        } break
+        case ID.OBJECT_ATTRIBUTES: { } break
+      }
+      c.end()
+    }
+
+    return [pos, nrm]
+  }
+}
+class CollisionObject {
+  LoadObject(c: ChunkHandler) {
+    let pos: number[] = []
+    let nrm: number[] = []
+
+    const name = c.pstr()
+    const version = c.u32()
+    const stringData = c.pstr()
+    const nbSubObject = c.u32()
+    const numOwner = c.u32()
+
+    while (c.remaining()) {
+      switch (c.begin()) {
+        case ID.OWNER: {
+          const numNames = c.u32()
+          if (numNames) {
+
+            while (c.remaining()) {
+              switch (c.begin()) {
+                case ID.OWNERNAME: {
+                  const newName = c.pstr()
+                }
+              }
+              c.end()
+            }
+          }
+        } break
+        case ID.SELFCOLLISION: {
+          const index1 = c.u32()
+          const index2 = c.u32()
+          const self1 = !!c.u16()
+          const self2 = !!c.u16()
+        } break
+        case ID.VOLUME: {
+          const [p, n] = LoadCollisionVolume(c)
+          pos = pos.concat(p)
+          nrm = nrm.concat(n)
+        } break
+        case ID.ATTRIBUTE: {
+          const isStatic = !!c.u16()
+          const defaultArea = c.u32()
+          const canRoll = !!c.u16()
+          const canSlide = !!c.u16()
+          const canSpin = !!c.u16()
+          const canBounce = !!c.u16()
+          const extraAttribute1 = c.u32()
+          const extraAttribute2 = c.u32()
+          const extraAttribute3 = c.u32()
+        } break
+      }
+      c.end()
+    }
+    return [pos, nrm]
+  }
+}
+function LoadCollisionVolume(c: ChunkHandler) {
+  let pos: number[] = []
+  let nrm: number[] = []
+  const objrefIndex = c.u32()
+  const ownerIndex = c.u32()
+  const numSubVolume = c.u32()
+  let newCollisionVolume = null
+
+  switch (c.begin()) {
+    case ID.SPHERE: { } break
+    case ID.CYLINDER: { } break
+    case ID.OBBOX: {
+      const l0 = c.f32()
+      const l1 = c.f32()
+      const l2 = c.f32()
+      const p = LoadVectorFromCollisionVectorChunk(c)
+      const o0 = LoadVectorFromCollisionVectorChunk(c)
+      const o1 = LoadVectorFromCollisionVectorChunk(c)
+      const o2 = LoadVectorFromCollisionVectorChunk(c)
+      const [obboxPos, obboxNrm] = new OBBoxVolume(p, o0, o1, o2, l0, l1, l2).getBuffers()
+      pos = pos.concat(obboxPos)
+      nrm = nrm.concat(obboxNrm)
+
+    } break
+    case ID.WALL_: { } break
+    case ID.BBOX: { } break
+  }
+  c.end()
+
+  for (let i = 0; i < numSubVolume; i++) {
+    c.begin()
+    const [p, n] = LoadCollisionVolume(c)
+    pos = pos.concat(p)
+    nrm = nrm.concat(n)
+    c.end()
+  }
+  return [pos, nrm]
+}
+function LoadVectorFromCollisionVectorChunk(c: ChunkHandler) {
+  c.begin()
+  const v = vec3.fromValues(c.f32(), c.f32(), c.f32())
+  c.end()
+  return v
+}
+class OBBoxVolume {
+  mat: mat4
+  points: vec3[]
+  normals: vec3[]
+  center: vec3
+  constructor(center: vec3, axis0: vec3, axis1: vec3, axis2: vec3, l0: number, l1: number, l2: number) {
+    this.center = center
+    this.mat = mat4.fromValues(
+      axis0[0], axis0[1], axis0[2], 0,
+      axis1[0], axis1[1], axis1[2], 0,
+      axis2[0], axis2[1], axis2[2], 0,
+      0., 0., 0., 1.
+    )
+    this.points = getCubePoints([l0, l1, l2])
+    this.normals = calcNormals(this.points)
+  }
+  getBuffers() {
+    const pos: number[] = []
+    const nrm: number[] = []
+    this.points.forEach((v: vec3) => {
+      vec3.transformMat4(v, v, this.mat)
+      vec3.add(v, v, this.center)
+      pos.push(v[0])
+      pos.push(v[1])
+      pos.push(v[2])
+    })
+    this.normals.forEach(n => {
+      nrm.push(n[0])
+      nrm.push(n[1])
+      nrm.push(n[2])
+    })
+    return [pos, nrm]
+  }
+}
+function getCubePoints(l: number[]) {
+  return [
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(l[0], l[1], -l[2]),
+    vec3.fromValues(l[0], -l[1], -l[2]),
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(l[0], -l[1], -l[2]),
+    vec3.fromValues(l[0], -l[1], l[2]),
+
+    vec3.fromValues(-l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(-l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
+
+
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], l[1], l[2]),
+
+    vec3.fromValues(l[0], -l[1], l[2]),
+    vec3.fromValues(l[0], -l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(l[0], -l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
+
+
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
+    vec3.fromValues(l[0], -l[1], l[2]),
+
+    vec3.fromValues(l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(l[0], -l[1], -l[2]),
+  ]
+}
+function calcNormals(points: vec3[]) {
+  const normals: vec3[] = []
+  for (let i = 0; i < points.length; i += 3) {
+    const t0 = points[i + 0]
+    const t1 = points[i + 1]
+    const t2 = points[i + 2]
+    
+    const t = vec3.cross(
+      vec3.create(),
+      vec3.sub(vec3.create(), t0, t1),
+      vec3.sub(vec3.create(), t0, t2)
+    )
+    vec3.normalize(t, t)
+
+    normals.push(t, t, t)
+  }
+  return normals
+}
