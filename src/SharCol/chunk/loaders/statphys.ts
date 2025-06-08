@@ -94,7 +94,16 @@ function LoadCollisionVolume(c: ChunkHandler) {
 
   switch (c.begin()) {
     case ID.SPHERE: { } break
-    case ID.CYLINDER: { } break
+    case ID.CYLINDER: {
+      const radius = c.f32()
+      const length = c.f32()
+      const flatEnd = !!c.u16()
+      const p = LoadVectorFromCollisionVectorChunk(c)
+      const o = LoadVectorFromCollisionVectorChunk(c)
+      const [cylPos, cylNrm] = new CylinderVolume(p, o, length, radius, flatEnd).getBuffers()
+      pos = pos.concat(cylPos)
+      nrm = nrm.concat(cylNrm)
+    } break
     case ID.OBBOX: {
       const l0 = c.f32()
       const l1 = c.f32()
@@ -128,6 +137,46 @@ function LoadVectorFromCollisionVectorChunk(c: ChunkHandler) {
   c.end()
   return v
 }
+class CylinderVolume {
+  constructor(public center: vec3, public axis: vec3, public length: number, public radius: number, public flatEnd: boolean) { }
+  getBuffers(sides: number = 8) {
+    const pos: number[] = [], nrm: number[] = [], points: vec3[] = []
+    let r = 0
+    for (let d = 0; d < 360; d += 360 / sides) {
+      r = d * (Math.PI/ 180)
+      points.push(vec3.fromValues(
+        Math.sin(r) * this.radius,
+        0,
+        Math.cos(r) * this.radius
+      ))
+    }
+    points.push(points[0])
+
+    const top = points.map(v => {
+      vec3.add(v, v, vec3.fromValues(0, this.length, 0))
+      vec3.add(v, v, this.center)
+      return v
+    })
+    const bot = points.map(v => {
+      vec3.add(v, v, vec3.fromValues(0, -this.length, 0))
+      vec3.add(v, v, this.center)
+      return v
+    })
+    const box: vec3[] = []
+    top.slice(0, -1).forEach((_, i) => {
+      box.push(top[i + 0], bot[i + 0], bot[i + 1])
+      box.push(top[i + 0], bot[i + 1], top[i + 1])
+    })
+    
+    box.forEach(v => {
+      vec3.add(v, v, this.center)
+      pos.push(v[0], v[1], v[2])
+    })
+    const normals = calcNormals(box)
+    normals.forEach(n => { nrm.push(n[0], n[1], n[2]) })
+    return [pos, nrm]
+  }
+}
 class OBBoxVolume {
   mat: mat4
   points: vec3[]
@@ -141,15 +190,22 @@ class OBBoxVolume {
       axis2[0], axis2[1], axis2[2], 0,
       0., 0., 0., 1.
     )
-    this.points = getCubePoints([l0, l1, l2])
+    const firstSide = getCubePoints([l0, l1, l2])
+    const otherSide = []
+    for (let i = 0; i < firstSide.length; i += 3) {
+      otherSide.push(firstSide[i], firstSide[i+2], firstSide[i+1])
+    }
+    this.points = [...firstSide, ...otherSide].map(v => {
+      vec3.transformMat4(v, v, this.mat)
+      vec3.add(v, v, this.center)
+      return v
+    })
     this.normals = calcNormals(this.points)
   }
   getBuffers() {
     const pos: number[] = []
     const nrm: number[] = []
     this.points.forEach((v: vec3) => {
-      vec3.transformMat4(v, v, this.mat)
-      vec3.add(v, v, this.center)
       pos.push(v[0])
       pos.push(v[1])
       pos.push(v[2])

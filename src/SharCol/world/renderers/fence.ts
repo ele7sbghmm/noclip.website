@@ -6,9 +6,6 @@ import { makeStaticDataBuffer } from '../../../gfx/helpers/BufferHelpers.js'
 import { fillMatrix4x4 } from '../../../gfx/helpers/UniformBufferHelpers.js'
 import {
   GfxDevice,
-  GfxVertexBufferDescriptor,
-  GfxIndexBufferDescriptor,
-  GfxInputLayout,
   GfxFormat,
   GfxBufferUsage,
   GfxVertexBufferFrequency,
@@ -35,14 +32,15 @@ export class FenceRenderer extends EntityRenderer {
       { byteStride: 0x4, frequency: GfxVertexBufferFrequency.PerVertex }
     ]
     const indexBufferFormat = null
+
     let posData = entity.positionData.arrayBuffer
     let nrmData = entity.normalData!.arrayBuffer
     let clrData = entity.colorData!.arrayBuffer
 
-    this.drawCount = posData.byteLength / 12
     this.vertexDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, posData)
     this.normalDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, nrmData)
     this.colorDataBuffer = makeStaticDataBuffer(device, GfxBufferUsage.Vertex, clrData)
+
     this.vertexBufferDescriptors = [
       { byteOffset: 0, buffer: this.vertexDataBuffer },
       { byteOffset: 0, buffer: this.normalDataBuffer! },
@@ -54,12 +52,14 @@ export class FenceRenderer extends EntityRenderer {
       vertexBufferDescriptors: inputLayoutBufferDescriptors,
       indexBufferFormat,
     })
-
+    
+    this.drawCount = posData.byteLength / 12
     this.megaStateFlags = { cullMode: FenceRenderer.doubleSided ? GfxCullMode.None : GfxCullMode.Front }
   }
   destroy(device: GfxDevice) {
     device.destroyBuffer(this.vertexDataBuffer)
     device.destroyBuffer(this.normalDataBuffer!)
+    device.destroyBuffer(this.colorDataBuffer!)
   }
   prepareToRender(renderInstManager: GfxRenderInstManager) {
     if (!this.drawCount)

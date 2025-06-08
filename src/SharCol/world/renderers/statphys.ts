@@ -12,7 +12,8 @@ import {
   GfxFormat,
   GfxBufferUsage,
   GfxVertexBufferFrequency,
-  GfxProgram
+  GfxProgram,
+  GfxCullMode
 } from '../../../gfx/platform/GfxPlatform.js'
 
 import { Program } from '../../program.js'
@@ -55,6 +56,7 @@ export class StatPhysRenderer extends EntityRenderer {
       vertexBufferDescriptors: inputLayoutBufferDescriptors,
       indexBufferFormat,
     })
+    this.megaStateFlags = { cullMode: GfxCullMode.Back }
   }
   destroy(device: GfxDevice) {
     device.destroyBuffer(this.vertexDataBuffer)

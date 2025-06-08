@@ -72,7 +72,7 @@ const paths: Record<string, string[]> = {
     'l4i00.p3d',
     'l4i01.p3d',
     'l4i02.p3d',
-    'l4i03.p3d',
+    'l4i07.p3d',
     'l4r1.p3d',
     'l4r2.p3d',
     'l4r3.p3d',
