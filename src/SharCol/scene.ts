@@ -27,7 +27,7 @@ export class Scene implements Viewer.SceneGfx {
   renderHelper: GfxRenderHelper
   renderInstListMain = new GfxRenderInstList
 
-  static drawFences: boolean = true
+  static drawFences: boolean = false
   static drawStatPhys: boolean = true
   static drawIntersects: boolean = true
 

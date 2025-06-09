@@ -138,11 +138,20 @@ function LoadVectorFromCollisionVectorChunk(c: ChunkHandler) {
   return v
 }
 class CylinderVolume {
-  constructor(public center: vec3, public axis: vec3, public length: number, public radius: number, public flatEnd: boolean) { }
+  transformMatrix: mat4
+  constructor(center: vec3, axis: vec3, public length: number, public radius: number, public flatEnd: boolean) {
+    const rotationMatrix = mat4.create()
+    axisToRotationMatrix(rotationMatrix, axis, mat4.create())
+    
+    this.transformMatrix = mat4.clone(rotationMatrix)
+    this.transformMatrix[12] = center[0]
+    this.transformMatrix[13] = center[1]
+    this.transformMatrix[14] = center[2]
+  }
   getBuffers(sides: number = 8) {
     const pos: number[] = [], nrm: number[] = [], points: vec3[] = []
     let r = 0
-    for (let d = 0; d < 360; d += 360 / sides) {
+    for (let d = 0; d < 360; d += Math.floor(360 / sides)) {
       r = d * (Math.PI/ 180)
       points.push(vec3.fromValues(
         Math.sin(r) * this.radius,
@@ -152,24 +161,32 @@ class CylinderVolume {
     }
     points.push(points[0])
 
+    let scratchVec3 = vec3.create()
+
+    const objectMatrix = mat4.create()
+
     const top = points.map(v => {
-      vec3.add(v, v, vec3.fromValues(0, this.length, 0))
-      vec3.add(v, v, this.center)
-      return v
+      scratchVec3 = vec3.clone(v)
+      vec3.add(scratchVec3, v, vec3.fromValues(0, this.length, 0))
+      vec3.transformMat4(scratchVec3, scratchVec3, this.transformMatrix)
+      return scratchVec3
     })
     const bot = points.map(v => {
-      vec3.add(v, v, vec3.fromValues(0, -this.length, 0))
-      vec3.add(v, v, this.center)
-      return v
+      scratchVec3 = vec3.clone(v)
+      vec3.add(scratchVec3, v, vec3.fromValues(0, -this.length, 0))
+      vec3.transformMat4(scratchVec3, scratchVec3,  this.transformMatrix)
+      return scratchVec3
     })
     const box: vec3[] = []
     top.slice(0, -1).forEach((_, i) => {
       box.push(top[i + 0], bot[i + 0], bot[i + 1])
       box.push(top[i + 0], bot[i + 1], top[i + 1])
+      box.push(top[i + 0], bot[i + 1], bot[i + 0])
+      box.push(top[i + 0], top[i + 1], bot[i + 1])
     })
     
     box.forEach(v => {
-      vec3.add(v, v, this.center)
+      // vec3.add(v, v, this.center)
       pos.push(v[0], v[1], v[2])
     })
     const normals = calcNormals(box)
@@ -190,12 +207,7 @@ class OBBoxVolume {
       axis2[0], axis2[1], axis2[2], 0,
       0., 0., 0., 1.
     )
-    const firstSide = getCubePoints([l0, l1, l2])
-    const otherSide = []
-    for (let i = 0; i < firstSide.length; i += 3) {
-      otherSide.push(firstSide[i], firstSide[i+2], firstSide[i+1])
-    }
-    this.points = [...firstSide, ...otherSide].map(v => {
+    this.points = getCubePoints([l0, l1, l2], true).map(v => {
       vec3.transformMat4(v, v, this.mat)
       vec3.add(v, v, this.center)
       return v
@@ -218,9 +230,102 @@ class OBBoxVolume {
     return [pos, nrm]
   }
 }
-function getCubePoints(l: number[]) {
+function getCubePoints(l: number[], doubleSided: boolean = false) {
+  if (!doubleSided) {
+    return [
+      vec3.fromValues(l[0], l[1], l[2]),
+      vec3.fromValues(l[0], -l[1], -l[2]),
+      vec3.fromValues(l[0], l[1], -l[2]),
+      vec3.fromValues(l[0], l[1], l[2]),
+      vec3.fromValues(l[0], -l[1], l[2]),
+      vec3.fromValues(l[0], -l[1], -l[2]),
+
+      vec3.fromValues(-l[0], l[1], l[2]),
+      vec3.fromValues(-l[0], l[1], -l[2]),
+      vec3.fromValues(-l[0], -l[1], -l[2]),
+      vec3.fromValues(-l[0], l[1], l[2]),
+      vec3.fromValues(-l[0], -l[1], -l[2]),
+      vec3.fromValues(-l[0], -l[1], l[2]),
+
+
+      vec3.fromValues(l[0], l[1], l[2]),
+      vec3.fromValues(l[0], l[1], -l[2]),
+      vec3.fromValues(-l[0], l[1], -l[2]),
+      vec3.fromValues(l[0], l[1], l[2]),
+      vec3.fromValues(-l[0], l[1], -l[2]),
+      vec3.fromValues(-l[0], l[1], l[2]),
+
+      vec3.fromValues(l[0], -l[1], l[2]),
+      vec3.fromValues(-l[0], -l[1], -l[2]),
+      vec3.fromValues(l[0], -l[1], -l[2]),
+      vec3.fromValues(l[0], -l[1], l[2]),
+      vec3.fromValues(-l[0], -l[1], l[2]),
+      vec3.fromValues(-l[0], -l[1], -l[2]),
+
+
+      vec3.fromValues(l[0], l[1], l[2]),
+      vec3.fromValues(-l[0], l[1], l[2]),
+      vec3.fromValues(-l[0], -l[1], l[2]),
+      vec3.fromValues(l[0], l[1], l[2]),
+      vec3.fromValues(-l[0], -l[1], l[2]),
+      vec3.fromValues(l[0], -l[1], l[2]),
+
+      vec3.fromValues(l[0], l[1], -l[2]),
+      vec3.fromValues(-l[0], -l[1], -l[2]),
+      vec3.fromValues(-l[0], l[1], -l[2]),
+      vec3.fromValues(l[0], l[1], -l[2]),
+      vec3.fromValues(l[0], -l[1], -l[2]),
+      vec3.fromValues(-l[0], -l[1], -l[2]),
+    ]
+  }
   return [
     vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(l[0], -l[1], -l[2]),
+    vec3.fromValues(l[0], l[1], -l[2]),
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(l[0], -l[1], l[2]),
+    vec3.fromValues(l[0], -l[1], -l[2]),
+
+    vec3.fromValues(-l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(-l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
+
+
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], l[1], l[2]),
+
+    vec3.fromValues(l[0], -l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(l[0], -l[1], -l[2]),
+    vec3.fromValues(l[0], -l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+
+
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
+    vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
+    vec3.fromValues(l[0], -l[1], l[2]),
+
+    vec3.fromValues(l[0], l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
+    vec3.fromValues(l[0], l[1], -l[2]),
+    vec3.fromValues(l[0], -l[1], -l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
+
+//
+
+    vec3.fromValues(l[0], l[1], l[2]),
     vec3.fromValues(l[0], l[1], -l[2]),
     vec3.fromValues(l[0], -l[1], -l[2]),
     vec3.fromValues(l[0], l[1], l[2]),
@@ -228,19 +333,19 @@ function getCubePoints(l: number[]) {
     vec3.fromValues(l[0], -l[1], l[2]),
 
     vec3.fromValues(-l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
     vec3.fromValues(-l[0], l[1], -l[2]),
-    vec3.fromValues(-l[0], -l[1], -l[2]),
     vec3.fromValues(-l[0], l[1], l[2]),
-    vec3.fromValues(-l[0], -l[1], -l[2]),
     vec3.fromValues(-l[0], -l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], -l[2]),
 
 
     vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
     vec3.fromValues(l[0], l[1], -l[2]),
-    vec3.fromValues(-l[0], l[1], -l[2]),
     vec3.fromValues(l[0], l[1], l[2]),
-    vec3.fromValues(-l[0], l[1], -l[2]),
     vec3.fromValues(-l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], l[1], -l[2]),
 
     vec3.fromValues(l[0], -l[1], l[2]),
     vec3.fromValues(l[0], -l[1], -l[2]),
@@ -251,11 +356,11 @@ function getCubePoints(l: number[]) {
 
 
     vec3.fromValues(l[0], l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
     vec3.fromValues(-l[0], l[1], l[2]),
-    vec3.fromValues(-l[0], -l[1], l[2]),
     vec3.fromValues(l[0], l[1], l[2]),
-    vec3.fromValues(-l[0], -l[1], l[2]),
     vec3.fromValues(l[0], -l[1], l[2]),
+    vec3.fromValues(-l[0], -l[1], l[2]),
 
     vec3.fromValues(l[0], l[1], -l[2]),
     vec3.fromValues(-l[0], l[1], -l[2]),
@@ -282,4 +387,26 @@ function calcNormals(points: vec3[]) {
     normals.push(t, t, t)
   }
   return normals
+}
+
+function axisToRotationMatrix(out: mat4, axis: vec3, objectMatrix: mat4) {
+    const normalizedAxis = vec3.create()
+    vec3.normalize(normalizedAxis, axis)
+
+    const localAxis = vec3.fromValues(0, 1, 0)
+    const rotationAxis = vec3.create()
+    vec3.cross(rotationAxis, localAxis, normalizedAxis)
+
+    const dot = vec3.dot(localAxis, normalizedAxis)
+    const angle = Math.acos(Math.max(-1, Math.min(1, dot)))
+
+    const rotationMatrix = mat4.create()
+    if (vec3.length(rotationAxis) > 0.0001) {
+      vec3.normalize(rotationAxis, rotationAxis)
+      mat4.fromRotation(rotationMatrix, angle, rotationAxis)
+    } else if (dot < -.9999) {
+      mat4.fromRotation(rotationMatrix, Math.PI, vec3.fromValues(1., 0., 0.,))
+    }
+
+    mat4.multiply(out, rotationMatrix, objectMatrix)
 }

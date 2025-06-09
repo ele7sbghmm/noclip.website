@@ -56,7 +56,7 @@ export class StatPhysRenderer extends EntityRenderer {
       vertexBufferDescriptors: inputLayoutBufferDescriptors,
       indexBufferFormat,
     })
-    this.megaStateFlags = { cullMode: GfxCullMode.Back }
+    this.megaStateFlags = { cullMode: GfxCullMode.Front }
   }
   destroy(device: GfxDevice) {
     device.destroyBuffer(this.vertexDataBuffer)
@@ -75,6 +75,7 @@ export class StatPhysRenderer extends EntityRenderer {
     offs += fillMatrix4x4(mapped, offs, mat4.create())
 
     const renderInst = renderInstManager.newRenderInst()
+    renderInst.setMegaStateFlags(this.megaStateFlags)
     renderInst.setVertexInput(
       this.inputLayout,
       this.vertexBufferDescriptors,
