@@ -66,7 +66,7 @@ export class ChunkHandler {
   }
   u16(le: boolean = true) {
     this.offs += 2
-    return this.view.getUint32(this.offs - 2, le)
+    return this.view.getUint16(this.offs - 2, le)
   }
   u8() {
     this.offs += 1

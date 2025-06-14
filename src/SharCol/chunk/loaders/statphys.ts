@@ -3,6 +3,7 @@ import { vec3, mat4 } from 'gl-matrix'
 import { ChunkHandler } from '../chunkHandler.js'
 import { ID } from '../id.js'
 
+let scratchVec3 = vec3.create()
 export class StatPhys {
   LoadObject(c: ChunkHandler) {
     let pos: number[] = []
@@ -91,16 +92,23 @@ function LoadCollisionVolume(c: ChunkHandler) {
   const ownerIndex = c.u32()
   const numSubVolume = c.u32()
   let newCollisionVolume = null
-
+  const _sides = 8
+  const _doubleSided = false
   switch (c.begin()) {
-    case ID.SPHERE: { } break
+    case ID.SPHERE: {
+      const radius = c.f32()
+      const center = LoadVectorFromCollisionVectorChunk(c)
+      const [sphPos, sphNrm] = new SphereVolume(center, radius).getBuffers(_sides, _doubleSided)
+      pos = pos.concat(sphPos)
+      nrm = nrm.concat(sphNrm)
+    } break
     case ID.CYLINDER: {
       const radius = c.f32()
       const length = c.f32()
-      const flatEnd = !!c.u16()
+      const flatEnd = c.u16()
       const p = LoadVectorFromCollisionVectorChunk(c)
       const o = LoadVectorFromCollisionVectorChunk(c)
-      const [cylPos, cylNrm] = new CylinderVolume(p, o, length, radius, flatEnd).getBuffers()
+      const [cylPos, cylNrm] = new CylinderVolume(p, o, length, radius, !!flatEnd).getBuffers(_sides, _doubleSided)
       pos = pos.concat(cylPos)
       nrm = nrm.concat(cylNrm)
     } break
@@ -137,6 +145,69 @@ function LoadVectorFromCollisionVectorChunk(c: ChunkHandler) {
   c.end()
   return v
 }
+class SphereVolume {
+  constructor(public center: vec3, public radius: number) { }
+  getPoints(sides: number) {
+    let row: vec3[] = [], rows: vec3[][] = []
+    let r: number, r2: number, d: number, d2: number, rad: number
+
+    // rows.push(Array.from({ length: sides }, () => vec3.fromValues(0, this.radius, 0)))
+    for (d2 = -90; d2 <= 90; d2 += Math.floor(360 / sides)) {
+      r2 = d2 * (Math.PI / 180)
+      rad = Math.cos(r2) * this.radius
+      row = []
+      for (d = 0; d < 360; d += Math.floor(360 / sides)) {
+        r = d * (Math.PI / 180)
+
+        scratchVec3 = vec3.fromValues(
+          Math.sin(r) * rad,
+          Math.sin(r2) * this.radius,
+          Math.cos(r) * rad
+        )
+        row.push(scratchVec3)
+      }
+      rows.push(row)
+    }
+    // rows.push(Array.from({ length: sides }, () => vec3.fromValues(0, this.radius, 0)))
+    // rows = [rows[0], rows[1]]
+    return rows.map(row => row.map(v => {
+      scratchVec3 = vec3.clone(v)
+      vec3.add(scratchVec3, scratchVec3, this.center)
+      return scratchVec3
+    }))
+  }
+  getBuffers(sides: number, doubleSided: boolean = false) {
+    const pos: number[] = [], nrm: number[] = [], box: vec3[] = []
+    let trow: vec3[], nrow: vec3[]
+    let tp: vec3, tq: vec3, np: vec3, nq: vec3
+    const rows = this.getPoints(sides)
+
+    let i, j
+    for (i = 0; i < rows.length - 1; i++) {
+      trow = rows[i + 0]
+      nrow = rows[i + 1]
+      for (j = 0; j < sides; j++) {
+        tp = trow[j + 0]
+        tq = j < sides - 1 ? trow[j + 1] : trow[0]
+        np = nrow[j + 0]
+        nq = j < sides - 1 ? nrow[j + 1] : nrow[0]
+        box.push(tp, nq, np)
+        box.push(tp, tq, nq)
+        if (doubleSided) {
+          box.push(tp, np, nq)
+          box.push(tp, nq, tq)
+        }
+      }
+    }
+    box.forEach(v => {
+      scratchVec3 = vec3.clone(v)
+      pos.push(scratchVec3[0], scratchVec3[1], scratchVec3[2])
+    })
+    const normals = calcNormals(box)
+    normals.forEach(n => { nrm.push(n[0], n[1], n[2]) })
+    return [pos, nrm]
+  }
+}
 class CylinderVolume {
   transformMatrix: mat4
   constructor(center: vec3, axis: vec3, public length: number, public radius: number, public flatEnd: boolean) {
@@ -148,46 +219,111 @@ class CylinderVolume {
     this.transformMatrix[13] = center[1]
     this.transformMatrix[14] = center[2]
   }
-  getBuffers(sides: number = 8) {
-    const pos: number[] = [], nrm: number[] = [], points: vec3[] = []
-    let r = 0
-    for (let d = 0; d < 360; d += Math.floor(360 / sides)) {
-      r = d * (Math.PI/ 180)
-      points.push(vec3.fromValues(
-        Math.sin(r) * this.radius,
-        0,
-        Math.cos(r) * this.radius
-      ))
-    }
-    points.push(points[0])
+  getBuffers(sides: number, doubleSided: boolean = false) {
+    const pos: number[] = [], nrm: number[] = []
+    const top: vec3[][] = [], bot: vec3[][] = []
 
     let scratchVec3 = vec3.create()
+    let roww = []
+    let i: number, j: number, r: number, r2: number, d: number, d2: number, b: number, rad: number
 
-    const objectMatrix = mat4.create()
+    const idk = (this.flatEnd ? 1 : 90)
+    for (d2 = 0; d2 < idk; d2 += Math.floor(360 / sides)) {
+      r2 = d2 * (Math.PI / 180)
+      rad = Math.cos(r2) * this.radius
+      roww = []
+      for (d = 0; d < 360; d += Math.floor(360 / sides)) {
+        r = d * (Math.PI / 180)
 
-    const top = points.map(v => {
+        scratchVec3 = vec3.fromValues(
+          Math.sin(r) * rad,
+          Math.sin(r2) * this.radius,
+          Math.cos(r) * rad
+        )
+        roww.push(scratchVec3)
+      }
+      top.push(roww)
+    }
+    for (d2 = 0; d2 < idk; d2 += Math.floor(360 / sides)) {
+      r2 = d2 * (Math.PI / 180)
+      rad = Math.cos(r2) * this.radius
+      roww = []
+      for (d = 0; d < 360; d += Math.floor(360 / sides)) {
+        r = d * (Math.PI / 180)
+
+        scratchVec3 = vec3.fromValues(
+          Math.sin(r) * rad,
+          -Math.sin(r2) * this.radius,
+          Math.cos(r) * rad
+        )
+        roww.push(scratchVec3)
+      }
+      bot.push(roww)
+    }
+    top.push(Array.from({ length: sides }, () => vec3.fromValues(0, this.flatEnd ? 0 : this.radius, 0)))
+    bot.push(Array.from({ length: sides }, () => vec3.fromValues(0, this.flatEnd ? 0 : -this.radius, 0)))
+    
+    const box: vec3[] = []
+    let trow: vec3[], nrow: vec3[]
+    let tp: vec3, np: vec3
+    let tq: vec3, nq: vec3
+    const topTransformed = top.map(r => r.map(v => {
       scratchVec3 = vec3.clone(v)
-      vec3.add(scratchVec3, v, vec3.fromValues(0, this.length, 0))
+      vec3.add(scratchVec3, scratchVec3, vec3.fromValues(0, this.length, 0))
       vec3.transformMat4(scratchVec3, scratchVec3, this.transformMatrix)
       return scratchVec3
-    })
-    const bot = points.map(v => {
+    }))
+    const botTransformed = bot.map(r => r.map(v => {
       scratchVec3 = vec3.clone(v)
-      vec3.add(scratchVec3, v, vec3.fromValues(0, -this.length, 0))
-      vec3.transformMat4(scratchVec3, scratchVec3,  this.transformMatrix)
+      vec3.add(scratchVec3, scratchVec3, vec3.fromValues(0, -this.length, 0))
+      vec3.transformMat4(scratchVec3, scratchVec3, this.transformMatrix)
       return scratchVec3
-    })
-    const box: vec3[] = []
-    top.slice(0, -1).forEach((_, i) => {
-      box.push(top[i + 0], bot[i + 0], bot[i + 1])
-      box.push(top[i + 0], bot[i + 1], top[i + 1])
-      box.push(top[i + 0], bot[i + 1], bot[i + 0])
-      box.push(top[i + 0], top[i + 1], bot[i + 1])
-    })
-    
+    }))
+    for (i = 0; i < top.length - 1; i++) {
+      trow = topTransformed[i + 0]
+      nrow = topTransformed[i + 1]
+      for (j = 0; j < sides; j++) {
+        tp = trow[j + 0]
+        tq = j < sides - 1 ? trow[j + 1] : trow[0]
+        np = nrow[j + 0]
+        nq = j < sides - 1 ? nrow[j + 1] : nrow[0]
+        box.push(tp, nq, np)
+        box.push(tp, tq, nq)
+        if (doubleSided) {
+          box.push(tp, np, nq)
+          box.push(tp, nq, tq)
+        }
+      }
+    }
+    for (i = 0; i < bot.length - 1; i++) {
+      trow = botTransformed[i + 0]
+      nrow = botTransformed[i + 1]
+      for (j = 0; j < sides; j++) {
+        tp = trow[j + 0]
+        tq = j < sides - 1 ? trow[j + 1] : trow[0]
+        np = nrow[j + 0]
+        nq = j < sides - 1 ? nrow[j + 1] : nrow[0]
+        box.push(tp, np, nq)
+        box.push(tp, nq, tq)
+        if (doubleSided) {
+          box.push(tp, nq, np)
+          box.push(tp, tq, nq)
+        }
+      }
+    }
+    for (i = 0; i < sides; i++) {
+      j = i < sides - 1 ? i + 1 : 0
+      box.push(botTransformed[0][i], topTransformed[0][j], topTransformed[0][i])
+      box.push(botTransformed[0][i], botTransformed[0][j], topTransformed[0][j])
+      if (doubleSided) {
+      box.push(botTransformed[0][i], topTransformed[0][i], topTransformed[0][j])
+      box.push(botTransformed[0][i], topTransformed[0][j], botTransformed[0][j])
+    }
+    }
+
     box.forEach(v => {
-      // vec3.add(v, v, this.center)
-      pos.push(v[0], v[1], v[2])
+      scratchVec3 = vec3.clone(v)
+      pos.push(scratchVec3[0], scratchVec3[1], scratchVec3[2])
     })
     const normals = calcNormals(box)
     normals.forEach(n => { nrm.push(n[0], n[1], n[2]) })
@@ -207,7 +343,7 @@ class OBBoxVolume {
       axis2[0], axis2[1], axis2[2], 0,
       0., 0., 0., 1.
     )
-    this.points = getCubePoints([l0, l1, l2], true).map(v => {
+    this.points = getCubePoints([l0, l1, l2], false).map(v => {
       vec3.transformMat4(v, v, this.mat)
       vec3.add(v, v, this.center)
       return v
