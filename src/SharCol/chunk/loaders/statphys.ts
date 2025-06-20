@@ -92,7 +92,7 @@ function LoadCollisionVolume(c: ChunkHandler) {
   const ownerIndex = c.u32()
   const numSubVolume = c.u32()
   let newCollisionVolume = null
-  const _sides = 8
+  const _sides = 12
   const _doubleSided = false
   switch (c.begin()) {
     case ID.SPHERE: {
@@ -151,7 +151,6 @@ class SphereVolume {
     let row: vec3[] = [], rows: vec3[][] = []
     let r: number, r2: number, d: number, d2: number, rad: number
 
-    // rows.push(Array.from({ length: sides }, () => vec3.fromValues(0, this.radius, 0)))
     for (d2 = -90; d2 <= 90; d2 += Math.floor(360 / sides)) {
       r2 = d2 * (Math.PI / 180)
       rad = Math.cos(r2) * this.radius
@@ -161,15 +160,14 @@ class SphereVolume {
 
         scratchVec3 = vec3.fromValues(
           Math.sin(r) * rad,
-          Math.sin(r2) * this.radius,
-          Math.cos(r) * rad
+          -Math.cos(r) * rad,
+          Math.sin(r2) * this.radius
         )
         row.push(scratchVec3)
       }
       rows.push(row)
     }
-    // rows.push(Array.from({ length: sides }, () => vec3.fromValues(0, this.radius, 0)))
-    // rows = [rows[0], rows[1]]
+
     return rows.map(row => row.map(v => {
       scratchVec3 = vec3.clone(v)
       vec3.add(scratchVec3, scratchVec3, this.center)
@@ -213,7 +211,7 @@ class CylinderVolume {
   constructor(center: vec3, axis: vec3, public length: number, public radius: number, public flatEnd: boolean) {
     const rotationMatrix = mat4.create()
     axisToRotationMatrix(rotationMatrix, axis, mat4.create())
-    
+
     this.transformMatrix = mat4.clone(rotationMatrix)
     this.transformMatrix[12] = center[0]
     this.transformMatrix[13] = center[1]
@@ -262,7 +260,7 @@ class CylinderVolume {
     }
     top.push(Array.from({ length: sides }, () => vec3.fromValues(0, this.flatEnd ? 0 : this.radius, 0)))
     bot.push(Array.from({ length: sides }, () => vec3.fromValues(0, this.flatEnd ? 0 : -this.radius, 0)))
-    
+
     const box: vec3[] = []
     let trow: vec3[], nrow: vec3[]
     let tp: vec3, np: vec3
@@ -316,9 +314,9 @@ class CylinderVolume {
       box.push(botTransformed[0][i], topTransformed[0][j], topTransformed[0][i])
       box.push(botTransformed[0][i], botTransformed[0][j], topTransformed[0][j])
       if (doubleSided) {
-      box.push(botTransformed[0][i], topTransformed[0][i], topTransformed[0][j])
-      box.push(botTransformed[0][i], topTransformed[0][j], botTransformed[0][j])
-    }
+        box.push(botTransformed[0][i], topTransformed[0][i], topTransformed[0][j])
+        box.push(botTransformed[0][i], topTransformed[0][j], botTransformed[0][j])
+      }
     }
 
     box.forEach(v => {
@@ -459,7 +457,7 @@ function getCubePoints(l: number[], doubleSided: boolean = false) {
     vec3.fromValues(l[0], -l[1], -l[2]),
     vec3.fromValues(-l[0], -l[1], -l[2]),
 
-//
+    //
 
     vec3.fromValues(l[0], l[1], l[2]),
     vec3.fromValues(l[0], l[1], -l[2]),
@@ -512,7 +510,7 @@ function calcNormals(points: vec3[]) {
     const t0 = points[i + 0]
     const t1 = points[i + 1]
     const t2 = points[i + 2]
-    
+
     const t = vec3.cross(
       vec3.create(),
       vec3.sub(vec3.create(), t0, t1),
@@ -526,23 +524,23 @@ function calcNormals(points: vec3[]) {
 }
 
 function axisToRotationMatrix(out: mat4, axis: vec3, objectMatrix: mat4) {
-    const normalizedAxis = vec3.create()
-    vec3.normalize(normalizedAxis, axis)
+  const normalizedAxis = vec3.create()
+  vec3.normalize(normalizedAxis, axis)
 
-    const localAxis = vec3.fromValues(0, 1, 0)
-    const rotationAxis = vec3.create()
-    vec3.cross(rotationAxis, localAxis, normalizedAxis)
+  const localAxis = vec3.fromValues(0, 1, 0)
+  const rotationAxis = vec3.create()
+  vec3.cross(rotationAxis, localAxis, normalizedAxis)
 
-    const dot = vec3.dot(localAxis, normalizedAxis)
-    const angle = Math.acos(Math.max(-1, Math.min(1, dot)))
+  const dot = vec3.dot(localAxis, normalizedAxis)
+  const angle = Math.acos(Math.max(-1, Math.min(1, dot)))
 
-    const rotationMatrix = mat4.create()
-    if (vec3.length(rotationAxis) > 0.0001) {
-      vec3.normalize(rotationAxis, rotationAxis)
-      mat4.fromRotation(rotationMatrix, angle, rotationAxis)
-    } else if (dot < -.9999) {
-      mat4.fromRotation(rotationMatrix, Math.PI, vec3.fromValues(1., 0., 0.,))
-    }
+  const rotationMatrix = mat4.create()
+  if (vec3.length(rotationAxis) > 0.0001) {
+    vec3.normalize(rotationAxis, rotationAxis)
+    mat4.fromRotation(rotationMatrix, angle, rotationAxis)
+  } else if (dot < -.9999) {
+    mat4.fromRotation(rotationMatrix, Math.PI, vec3.fromValues(1., 0., 0.,))
+  }
 
-    mat4.multiply(out, rotationMatrix, objectMatrix)
+  mat4.multiply(out, rotationMatrix, objectMatrix)
 }

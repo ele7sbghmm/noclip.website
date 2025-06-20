@@ -21,8 +21,7 @@ export class Global {
   name: string = 'global sector'
   visible: boolean = true
 
-  static drawFences: boolean = true
-  static fenceHeight: number = 100
+  static fenceHeight: number = 30
 
   sectors: Sector[] = []
   fenceRenderer: FenceRenderer
