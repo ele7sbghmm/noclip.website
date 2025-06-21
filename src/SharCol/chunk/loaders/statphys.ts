@@ -160,8 +160,8 @@ class SphereVolume {
 
         scratchVec3 = vec3.fromValues(
           Math.sin(r) * rad,
-          -Math.cos(r) * rad,
-          Math.sin(r2) * this.radius
+          Math.sin(r2) * this.radius,
+          Math.cos(r) * rad,
         )
         row.push(scratchVec3)
       }
@@ -504,7 +504,7 @@ function getCubePoints(l: number[], doubleSided: boolean = false) {
     vec3.fromValues(l[0], -l[1], -l[2]),
   ]
 }
-function calcNormals(points: vec3[]) {
+export function calcNormals(points: vec3[]) {
   const normals: vec3[] = []
   for (let i = 0; i < points.length; i += 3) {
     const t0 = points[i + 0]

@@ -32,11 +32,14 @@ layout(location = ${Program.a_Color}) attribute uvec4 a_Color;
 
 void mainVS() {
   float t_Scale = 100.;
-  vec3 t_Position = vec3(-a_Position.x, a_Position.y, a_Position.z);
+   // srr2/code/roads/geometry.cpp:811 Get90DegreeLeftTurn(...)
+  vec3 t_Position = vec3(a_Position.z, a_Position.y, a_Position.x);
   vec3 t_PositionWorld = UnpackMatrix(u_ViewMatrix) * vec4(t_Position * t_Scale, 1.);
   gl_Position = UnpackMatrix(u_ProjectionMatrix) * vec4(t_PositionWorld, 1.);
+  
   vec3 t_LightDir = normalize(vec3(.2, -1., .5));
   v_LightIntensity = -dot(a_Normal, t_LightDir);
+
   v_Color = vec4(a_Color) / 255.;
 }
 #endif
@@ -44,9 +47,8 @@ void mainVS() {
 #ifdef FRAG
 void mainPS() {
   float t_LightTint = v_LightIntensity * .3;
-  // gl_FragColor = vec4(t_LightTint, t_LightTint, t_LightTint, 1.);
+
   gl_FragColor = vec4(v_Color.rgb + t_LightTint, v_Color.a);
-  // gl_FragColor = v_Color;
 }
 #endif
 `

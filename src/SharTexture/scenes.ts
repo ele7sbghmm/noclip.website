@@ -26,6 +26,8 @@ const id = "shar texture"
 const name = "shar texture"
 const path = 'sharTexture/art__'
 const sceneDescs = [
+  
+  new SceneDesc('camset', 'Cam set', path),
   new SceneDesc('Level 1', 'Suburbs Day', path),
   new SceneDesc('Level 2', 'Downtown Day', path),
   new SceneDesc('Level 3', 'Seaside Sunset', path),
@@ -62,6 +64,7 @@ export function fetchPNG(buffer: ArrayBuffer): Promise<ImageData> {
 }
 
 const paths: Record<string, string[]> = {
+  'camset': ['frontend/scrooby/resource/pure3d/camset'],
   'l1z1': ['l1z1'],
   'l3r1': ['l3r1'],
   'Level 1': [

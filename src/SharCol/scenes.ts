@@ -19,6 +19,7 @@ const id = 'simpsons fence col'
 const name = 'simpsons fence col'
 const base = 'sharTexture'
 const paths: Record<string, string[]> = {
+  'camset': [ 'camset.p3d' ],
   'Level 1': [
     'L1_TERRA.p3d',
     'l1i00.p3d',
@@ -139,6 +140,7 @@ const paths: Record<string, string[]> = {
 }
 
 const sceneDescs = [
+  new SceneDesc('camset', 'Cam set', 'sharTexture/art__/frontend/scrooby/resource/pure3d'),
   new SceneDesc('Level 1', 'Suburbs Day', 'sharTexture/art__'),
   new SceneDesc('Level 2', 'Downtown Day', 'sharTexture/art__'),
   new SceneDesc('Level 3', 'Seaside Sunset', 'sharTexture/art__'),
@@ -148,7 +150,6 @@ const sceneDescs = [
   new SceneDesc('Level 7', 'Suburbs Halloween', 'sharTexture/art__'),
   new SceneDesc('fcm', 'fcm', 'sharTexture/fmc'),
   new SceneDesc('l1z1', 'l1z1', 'sharTexture/art__'),
-  new SceneDesc('int', 'int', '')
 ]
 
 export const sceneGroup = { id, name, sceneDescs }

@@ -16,6 +16,8 @@ import { StatPhys } from '../chunk/loaders/statphys.js'
 import { StatPhysRenderer } from './renderers/statphys.js'
 import { ID } from '../chunk/id.js'
 import { Scene } from '../scene.js'
+import { RoadManager, RoadLoader, Intersection, RoadSegmentData } from '../chunk/loaders/road.js'
+import { RoadManagerRenderer } from './renderers/road.js'
 
 export class Global {
   name: string = 'global sector'
@@ -25,6 +27,9 @@ export class Global {
 
   sectors: Sector[] = []
   fenceRenderer: FenceRenderer
+
+  roadManager: RoadManager = new RoadManager
+  roadManagerRenderer: RoadManagerRenderer
 
   constructor() { }
   setVisible(b: boolean) { this.visible = b }
@@ -37,8 +42,11 @@ export class Global {
 
     if (!this.visible)
       return
+
     if (Scene.drawFences)
       this.fenceRenderer.prepareToRender(renderInstManager)
+    // if (Scene.drawRoads)
+      this.roadManagerRenderer.prepareToRender(renderInstManager)
   }
   muncher(buffers: NamedArrayBufferSlice[], device: GfxDevice, renderCache: GfxRenderCache) {
     let fencePos: number[] = []
@@ -88,9 +96,20 @@ export class Global {
             )
             fenceClr = fenceClr.concat([0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff])
           } break
+          case ID.ROAD: {
+            new RoadLoader().load(ch, this.roadManager)
+          } break
+          case ID.INTERSECTION: {
+            new Intersection().load(ch, this.roadManager)
+          } break
+          case ID.ROAD: {
+            new RoadSegmentData().load(ch, this.roadManager)
+          } break
         }
         ch.end()
       }
+
+      this.roadManagerRenderer = new RoadManagerRenderer(device, renderCache, this.roadManager)
 
       if (buf.name.toLowerCase().includes('terra'))
         return
