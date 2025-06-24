@@ -11,16 +11,30 @@ import {
   GfxInputLayout,
   GfxFormat,
   GfxBufferUsage,
-  GfxVertexBufferFrequency
+  GfxVertexBufferFrequency,
+  GfxProgram
 } from '../../../gfx/platform/GfxPlatform.js'
 
 import { Program } from '../../program.js'
 import { EntityRenderer } from './util.js'
 import { Entity } from '../../chunk/loaders/util.js'
+import { assert } from '../../../util.js'
+import { Scene } from '../../scene.js'
 
 export class IntersectRenderer extends EntityRenderer {
+  static program: Program | null = null
+  static gfxProgram: GfxProgram | null = null
+
+  static createProgram() {
+    IntersectRenderer.gfxProgram = null
+    IntersectRenderer.program = new Program
+    IntersectRenderer.program.setDefineBool('USE_NORMAL_MAP_COLORS', Scene.collisionNormalMapColors)
+  }
   constructor(device: GfxDevice, renderCache: GfxRenderCache, entity: Entity) {
     super()
+
+    if (IntersectRenderer.program == null)
+      IntersectRenderer.createProgram()
 
     const vertexAttributeDescriptors = [
       { location: Program.a_Position, format: GfxFormat.F32_RGB, bufferIndex: 0, bufferByteOffset: 0 },
@@ -55,6 +69,11 @@ export class IntersectRenderer extends EntityRenderer {
     device.destroyBuffer(this.normalDataBuffer!)
   }
   prepareToRender(renderInstManager: GfxRenderInstManager) {
+    assert(!!this.drawCount, 'oops!')
+
+    if (IntersectRenderer.gfxProgram == null)
+      IntersectRenderer.gfxProgram = renderInstManager.gfxRenderCache.createProgram(IntersectRenderer.program!)
+
     const template = renderInstManager.pushTemplate()
 
     const mapped = template.mapUniformBufferF32(Program.ub_ModelParams)
@@ -67,6 +86,7 @@ export class IntersectRenderer extends EntityRenderer {
       this.vertexBufferDescriptors,
       this.indexBufferDescriptor
     )
+    renderInst.setGfxProgram(IntersectRenderer.gfxProgram)
     renderInst.setDrawCount(this.drawCount)
     renderInstManager.submitRenderInst(renderInst)
 

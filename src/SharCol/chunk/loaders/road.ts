@@ -17,7 +17,7 @@ export class RoadLoader {
     loadRoadSegment(c: ChunkHandler, rm: RoadManager, obj: { value: number }) {
         const name = c.pstr()
         const segDataName = c.pstr()
-        const hierachy = c.mat4()
+        const hierachy = c.mat4(false)
 
         const scale = c.mat4(false)
         const z = vec3.create()
@@ -131,8 +131,8 @@ export class RoadLoader {
         let current = closest
         let found = false
         let seg: RoadSegment
-        let currentTrailingLeft: vec3
-        let segOrigin: vec3
+        let currentTrailingLeft = vec3.create()
+        let segOrigin = vec3.create()
         while (allocatedSegments.length < segments.length) {
             found = false
 
@@ -266,8 +266,8 @@ export class Road {
     difficulty = 0
     isShortCut = false
     length: number
-    box: Box3D
-    sphere: { center: vec3, radius: number }
+    box = new Box3D
+    sphere = { center: vec3.create(), radius: Infinity }
 
     setRoadLength(len: number) { this.length = len }
     setDensity(density: number) { this.density = density }
@@ -279,7 +279,7 @@ export class Road {
     setDestinationIntersection(intersection: Intersection) { this.destinationIntersection = intersection }
     setName(name: string) { this.name = name }
     allocateSegments(numSegments: number) {
-        this.numRoadSegments = numSegments
+        this.maxRoadSegments = numSegments
         this.roadSegmentArray = Array.from({ length: numSegments }, () => new RoadSegment)
     }
     getSpeed() { return this.speed }
@@ -372,9 +372,9 @@ export class RoadSegmentData {
     corners = [vec3.create(), vec3.create(), vec3.create(), vec3.create()]
     edgeNormals = [vec3.create(), vec3.create(), vec3.create(), vec3.create()]
     normal = vec3.create()
-    direction: vec3
-    top: vec3
-    bottom: vec3
+    direction = vec3.create()
+    top = vec3.create()
+    bottom = vec3.create()
     numLanes = 0
     type: LocatorType
 
@@ -384,11 +384,36 @@ export class RoadSegmentData {
     getNumLanes() { return this.numLanes }
     setName(name: string) { this.name = name }
     setType(type: LocatorType) { this.type = type }
-    setData(direction: vec3, top: vec3, bottom: vec3, numLanes: number) {
-        this.direction = direction
-        this.top = top
-        this.bottom = bottom
+    setData(v0: vec3, v1: vec3, v2: vec3, numLanes: number) {
+        // this.direction = v0
+        // this.top = v1
+        // this.bottom = v2
         this.numLanes = numLanes
+
+        vec3.cross(this.normal, v0, v2)
+        vec3.normalize(this.normal, this.normal)
+
+        const origin = vec3.create()
+        this.corners[0] = origin
+        this.corners[1] = v0
+        this.corners[2] = v1
+        this.corners[3] = v2
+
+        vec3.sub(scratchVec, this.corners[0], this.corners[3])
+        vec3.cross(this.edgeNormals[0], scratchVec, this.normal)
+        vec3.normalize(this.edgeNormals[0], this.edgeNormals[0])
+
+        vec3.sub(scratchVec, this.corners[1], this.corners[0])
+        vec3.cross(this.edgeNormals[1], scratchVec, this.normal)
+        vec3.normalize(this.edgeNormals[1], this.edgeNormals[1])
+
+        vec3.sub(scratchVec, this.corners[1], this.corners[2])
+        vec3.cross(this.edgeNormals[2], scratchVec, this.normal)
+        vec3.normalize(this.edgeNormals[2], this.edgeNormals[2])
+
+        vec3.sub(scratchVec, this.corners[3], this.corners[2])
+        vec3.cross(this.edgeNormals[3], scratchVec, this.normal)
+        vec3.normalize(this.edgeNormals[3], this.edgeNormals[3])
     }
     load(c: ChunkHandler, rm: RoadManager) {
         const name = c.pstr()
@@ -396,14 +421,9 @@ export class RoadSegmentData {
         const numLanes = c.u32()
         const hasShoulder = !!c.u32()
 
-        const direction = vec3.create()
-        vec3.set(direction, c.f32(), c.f32(), c.f32())
-
-        const top = vec3.create()
-        vec3.set(top, c.f32(), c.f32(), c.f32())
-
-        const bottom = vec3.create()
-        vec3.set(bottom, c.f32(), c.f32(), c.f32())
+        const direction = vec3.fromValues(c.f32(), c.f32(), c.f32())
+        const top = vec3.fromValues(c.f32(), c.f32(), c.f32())
+        const bottom = vec3.fromValues(c.f32(), c.f32(), c.f32())
 
         const rsd = rm.getFreeRoadSegmentData()
         if (rsd == null)
@@ -422,12 +442,13 @@ class RoadSegment {
     segmentIndex = 0
     corners = [vec3.create(), vec3.create(), vec3.create(), vec3.create()]
     edgeNormals = [vec3.create(), vec3.create(), vec3.create(), vec3.create()]
-    normal: vec3
+    normal: vec3 = vec3.create()
     segmentLength: number
     laneWidth: number
     radius: number
     angle: number
-    sphere: { center: vec3, radius: number }
+    sphere = { center: vec3.create(), radius: Infinity }
+    box = new Box3D
 
     setName(name: string) { this.name = name }
     init(rsd: RoadSegmentData, hierachy: mat4, scaleAlongFacing: number) {
@@ -483,10 +504,10 @@ class RoadSegment {
         vec3.add(scratchVec, scratchVec, scratchVec_2)
         this.segmentLength = vec3.length(scratchVec)
 
-        const box = new Box3D ////////////////////////
-        this.getBoundingBox(box)
+        // const box = new Box3D ////////////////////////
+        this.getBoundingBox(this.box)
 
-        vec3.lerp(scratchVec, box.high, box.low, .5)
+        vec3.lerp(scratchVec, this.box.high, this.box.low, .5)
         this.sphere.center = scratchVec
         this.sphere.radius = vec3.length(scratchVec)
     }
@@ -546,13 +567,13 @@ class RoadSegment {
 export class Intersection {
     name: string
     type: LocatorType
-    radius: number
-    location: vec3
+    radius = Infinity
+    location = vec3.create()
 
-    roadListIn: Road[]
-    roadListOut: Road[]
-    numRoadsIn: number
-    numRoadsOut: number
+    roadListIn: Road[] = []
+    roadListOut: Road[] = []
+    numRoadsIn: number = 0
+    numRoadsOut: number = 0
     addRoadIn(road: Road) {
         this.roadListIn[this.numRoadsIn] = road
         this.numRoadsIn++
@@ -606,6 +627,6 @@ enum LocatorType {
 }
 
 class Box3D {
-    high: vec3
-    low: vec3
+    high = vec3.create()
+    low = vec3.create()
 }

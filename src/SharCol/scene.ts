@@ -20,6 +20,9 @@ import { GfxrAttachmentSlot } from '../gfx/render/GfxRenderGraph.js'
 import { Program } from './program.js'
 import { Global } from './world/global.js'
 import { Muncher } from './chunk/chunkMuncher.js'
+import { FenceRenderer } from './world/renderers/fence.js'
+import { StatPhysRenderer } from './world/renderers/statphys.js'
+import { IntersectRenderer } from './world/renderers/intersect.js'
 
 export class Scene implements Viewer.SceneGfx {
   program: Program
@@ -29,7 +32,9 @@ export class Scene implements Viewer.SceneGfx {
 
   static drawFences: boolean = false
   static drawStatPhys: boolean = true
-  static drawIntersects: boolean = true
+  static drawIntersects: boolean = false
+  static drawRoads: boolean = true
+  static collisionNormalMapColors = true
 
   global: Global
   constructor(device: GfxDevice, context: SceneContext, public id: string, public name: string, buffers: NamedArrayBufferSlice[]) {
@@ -38,6 +43,12 @@ export class Scene implements Viewer.SceneGfx {
 
     this.global = new Global
     this.global.muncher(buffers, device, this.renderHelper.renderCache)
+  }
+  static setCollisionNormalMapColors(b: boolean) {
+    Scene.collisionNormalMapColors = b
+    FenceRenderer.createProgram()
+    IntersectRenderer.createProgram()
+    StatPhysRenderer.createProgram()
   }
   createPanels() {
     const addCheckbox = (panel: UI.Panel, label: string, bool: boolean, setMethod: (b: boolean) => void) => {
@@ -49,9 +60,12 @@ export class Scene implements Viewer.SceneGfx {
     const debugPanel = new UI.Panel()
     debugPanel.customHeaderBackgroundColor = UI.COOL_BLUE_COLOR;
     debugPanel.setTitle(UI.RENDER_HACKS_ICON, 'Debug')
-    addCheckbox(debugPanel, 'draw fences', Scene.drawFences, b => Scene.drawFences = b)
-    addCheckbox(debugPanel, 'draw intersects', Scene.drawIntersects, b => Scene.drawIntersects = b)
-    addCheckbox(debugPanel, 'draw static physics', Scene.drawStatPhys, b => Scene.drawStatPhys = b)
+    addCheckbox(debugPanel, 'Draw Fences', Scene.drawFences, b => Scene.drawFences = b)
+    addCheckbox(debugPanel, 'Draw Intersects', Scene.drawIntersects, b => Scene.drawIntersects = b)
+    addCheckbox(debugPanel, 'Draw Static Physics', Scene.drawStatPhys, b => Scene.drawStatPhys = b)
+    addCheckbox(debugPanel, 'Draw Roads', Scene.drawRoads, b => Scene.drawRoads = b)
+
+    addCheckbox(debugPanel, 'Normal Colors for Collision Geometries', Scene.collisionNormalMapColors, Scene.setCollisionNormalMapColors)
 
     const layerPanel = new UI.LayerPanel([this.global, ...this.global.sectors])
     return [debugPanel, layerPanel]

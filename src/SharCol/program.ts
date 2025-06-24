@@ -39,8 +39,10 @@ void mainVS() {
   
   vec3 t_LightDir = normalize(vec3(.2, -1., .5));
   v_LightIntensity = -dot(a_Normal, t_LightDir);
-
   v_Color = vec4(a_Color) / 255.;
+#ifdef USE_NORMAL_MAP_COLORS
+  v_Color = vec4(abs(a_Normal.x) * .5 + .5, abs(a_Normal.z) * .5 + .5, abs(a_Normal.y) * .5 + .5, 1.);
+#endif
 }
 #endif
 
@@ -49,6 +51,9 @@ void mainPS() {
   float t_LightTint = v_LightIntensity * .3;
 
   gl_FragColor = vec4(v_Color.rgb + t_LightTint, v_Color.a);
+#ifdef USE_NORMAL_MAP_COLORS
+  gl_FragColor = v_Color;
+#endif
 }
 #endif
 `

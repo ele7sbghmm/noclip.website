@@ -19,16 +19,23 @@ import {
 import { Program } from '../../program.js'
 import { EntityRenderer } from './util.js'
 import { Entity } from '../../chunk/loaders/util.js'
+import { Scene } from '../../scene.js'
 
 export class StatPhysRenderer extends EntityRenderer {
-  program: Program
-  gfxProgram: GfxProgram | null
+  static program: Program | null = null
+  static gfxProgram: GfxProgram | null
+  
+  static createProgram() {
+    StatPhysRenderer.gfxProgram = null
+    StatPhysRenderer.program = new Program
+    StatPhysRenderer.program.setDefineBool('USE_NORMAL_MAP_COLORS', Scene.collisionNormalMapColors)
+  }
   constructor(device: GfxDevice, renderCache: GfxRenderCache, entity: Entity) {
     super()
-    this.createProgram()
+    if (StatPhysRenderer.program == null)
+      StatPhysRenderer.createProgram()
 
     const c = new Uint32Array(Array.from({ length: entity.positionData.byteLength / 3 }, () => 0xffaaaaaa))
-
     const vertexAttributeDescriptors = [
       { location: Program.a_Position, format: GfxFormat.F32_RGB, bufferIndex: 0, bufferByteOffset: 0 },
       { location: Program.a_Normal, format: GfxFormat.F32_RGB, bufferIndex: 1, bufferByteOffset: 0 },
@@ -66,8 +73,10 @@ export class StatPhysRenderer extends EntityRenderer {
   prepareToRender(renderInstManager: GfxRenderInstManager) {
     if (!this.drawCount)
       return
-    if (!this.gfxProgram)
-      this.gfxProgram = renderInstManager.gfxRenderCache.createProgram(this.program)
+
+    if (StatPhysRenderer.gfxProgram == null)
+      StatPhysRenderer.gfxProgram = renderInstManager.gfxRenderCache.createProgram(StatPhysRenderer.program!)
+
     const template = renderInstManager.pushTemplate()
 
     const mapped = template.mapUniformBufferF32(Program.ub_ModelParams)
@@ -82,13 +91,9 @@ export class StatPhysRenderer extends EntityRenderer {
       this.indexBufferDescriptor
     )
     renderInst.setDrawCount(this.drawCount)
+    renderInst.setGfxProgram(StatPhysRenderer.gfxProgram)
     renderInstManager.submitRenderInst(renderInst)
 
     renderInstManager.popTemplate()
-  }
-  createProgram() {
-    this.gfxProgram = null
-    this.program = new Program
-    this.program.setDefineBool('IS_FENCE', true)
   }
 }

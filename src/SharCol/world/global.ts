@@ -23,7 +23,7 @@ export class Global {
   name: string = 'global sector'
   visible: boolean = true
 
-  static fenceHeight: number = 30
+  static fenceHeight: number = 80
 
   sectors: Sector[] = []
   fenceRenderer: FenceRenderer
@@ -45,7 +45,7 @@ export class Global {
 
     if (Scene.drawFences)
       this.fenceRenderer.prepareToRender(renderInstManager)
-    // if (Scene.drawRoads)
+    if (Scene.drawRoads)
       this.roadManagerRenderer.prepareToRender(renderInstManager)
   }
   muncher(buffers: NamedArrayBufferSlice[], device: GfxDevice, renderCache: GfxRenderCache) {
@@ -102,7 +102,7 @@ export class Global {
           case ID.INTERSECTION: {
             new Intersection().load(ch, this.roadManager)
           } break
-          case ID.ROAD: {
+          case ID.ROAD_SEGMENT_DATA: {
             new RoadSegmentData().load(ch, this.roadManager)
           } break
         }
