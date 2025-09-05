@@ -3,6 +3,7 @@
 
 import { Viewer, SceneGfx, InitErrorCode, initializeViewer, makeErrorUI, resizeCanvas, ViewerUpdateInfo } from './viewer.js';
 
+import * as Scenes_MW2 from './0_mw2_col/scenes.js'
 import * as Scenes_Shar from './Shar/scenes.js'
 import * as Scenes_SharTexture from './SharTexture/scenes.js'
 import * as Scenes_SharCol from './SharCol/scenes.js'
@@ -124,6 +125,7 @@ import { debugJunk } from './DebugJunk.js';
 import { IS_DEVELOPMENT } from './BuildVersion.js';
 
 const sceneGroups: (string | SceneGroup)[] = [
+  Scenes_MW2.sceneGroup,
   Scenes_Shar.sceneGroup,
   Scenes_SharTexture.sceneGroup,
   Scenes_SharCol.sceneGroup,
