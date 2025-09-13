@@ -14,6 +14,23 @@ export class Reader {
   seekCur(offs: number) {
     this.offs += offs
   }
+  cstr() {
+    let len = 0
+    while (this.view.getUint8(this.offs + len++) != 0) { }
+
+    const text = new TextDecoder('ascii')
+      .decode(new DataView(this.view.buffer, this.offs, len))
+      .replace(/\x00/g, '')
+
+    this.offs += len
+    return text
+  }
+  str(len: number) {
+    this.offs += len
+    return new TextDecoder('ascii')
+      .decode(new DataView(this.view.buffer, this.offs - len, len))
+      .replace(/\x00/g, '')
+  }
   f32(le: boolean = true) {
     this.offs += 4
     return this.view.getFloat32(this.offs - 4, le)

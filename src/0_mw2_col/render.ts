@@ -52,7 +52,8 @@ export class SceneGfx implements Viewer.SceneGfx {
   render(device: GfxDevice, viewerInput: Viewer.ViewerRenderInput) {
     const builder = this.renderHelper.renderGraph.newGraphBuilder()
 
-    const mainColorDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.Color0, viewerInput, makeAttachmentClearDescriptor(colorNewFromRGBA(.2, .2, .2, 1.)))
+    const grey = colorNewFromRGBA(64 / 255, 64 / 255, 64 / 255, 1.)
+    const mainColorDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.Color0, viewerInput, makeAttachmentClearDescriptor(grey))
     const mainDepthDesc = makeBackbufferDescSimple(GfxrAttachmentSlot.DepthStencil, viewerInput, standardFullClearRenderPassDescriptor)
 
     const mainColorTargetID = builder.createRenderTargetID(mainColorDesc, 'Main Color')

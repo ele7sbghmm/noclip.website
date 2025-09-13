@@ -1,6 +1,6 @@
 import { vec3 } from 'gl-matrix'
 
-import { Plane, Brush } from '../parsers/clipmap.js'
+import { Plane, Brush, Bounds } from '../parsers/clipmap.js'
 
 let scratchVec3 = vec3.create()
 
@@ -50,8 +50,9 @@ function clip(plane: Plane, poly: vec3[]) {
 
     const d1 = vec3.dot(v1, plane.n) - plane.d
     const d2 = vec3.dot(v2, plane.n) - plane.d
-    const d1r = Math.round(d1 * 100) / 100
-    const d2r = Math.round(d2 * 100) / 100
+    const coef = 10
+    const d1r = Math.round(d1 * coef) / coef
+    const d2r = Math.round(d2 * coef) / coef
 
     if (d1r <= 0) {
       if (d2r <= 0) {
@@ -81,9 +82,15 @@ function clip(plane: Plane, poly: vec3[]) {
 }
 
 export function brushToHull(brush: Brush) {
+  if (brush.sides.length == 0)
+    return []
+
   const DEFAULT_SIZE = 1_000_000
 
-  const planes: Plane[] = brush.sides.map(side => side.plane)
+  const planes: Plane[] = [
+    ...boundsToPlanes(brush.bounds),
+    ...brush.sides.map(side => side.plane)
+  ]
   const polies: vec3[][] = planes.map(plane => planeToPoly(plane, DEFAULT_SIZE))
 
   let temp: vec3[]
@@ -95,6 +102,22 @@ export function brushToHull(brush: Brush) {
     }
 
     return temp
-  }).flat()
+  })
+}
+
+function boundsToPlanes(bounds: Bounds) {
+  const [mx, my, mz] = bounds.mid
+  const [hx, hy, hz] = bounds.half
+  const [x, y, z] = [mx + hx, my + hy, mz + hz]
+  const [nx, ny, nz] = [mx - hx, my - hy, mz - hz]
+
+  return [
+    new Plane(vec3.fromValues(1, 0, 0), x, 0),
+    new Plane(vec3.fromValues(0, 1, 0), y, 0),
+    new Plane(vec3.fromValues(0, 0, 1), z, 0),
+    new Plane(vec3.fromValues(-1, 0, 0), -nx, 0),
+    new Plane(vec3.fromValues(0, -1, 0), -ny, 0),
+    new Plane(vec3.fromValues(0, 0, -1), -nz, 0)
+  ]
 }
 
