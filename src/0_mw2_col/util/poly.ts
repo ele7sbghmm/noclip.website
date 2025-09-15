@@ -1,3 +1,4 @@
+import { assert } from '../../util.js'
 import { vec3 } from 'gl-matrix'
 
 import { Plane, Brush, Bounds } from '../parsers/clipmap.js'
@@ -28,12 +29,12 @@ function planeBasis(plane: Plane) {
   const n = vec3.create()
   vec3.normalize(n, plane.n)
 
-  let t = vec3.fromValues(0, 1, 0)
-  if (Math.abs(n[0]) < .9) {
-    t = vec3.fromValues(1, 0, 0)
-  }
+  let t = Math.abs(n[0]) < .9
+    ? vec3.fromValues(1, 0, 0)
+    : vec3.fromValues(0, 1, 0)
 
-  const [u, v] = [vec3.create(), vec3.create()]
+  const u = vec3.create()
+  const v = vec3.create()
   vec3.cross(u, n, t)
   vec3.normalize(u, u)
   vec3.cross(v, n, u)
@@ -50,9 +51,12 @@ function clip(plane: Plane, poly: vec3[]) {
 
     const d1 = vec3.dot(v1, plane.n) - plane.d
     const d2 = vec3.dot(v2, plane.n) - plane.d
-    const coef = 10
-    const d1r = Math.round(d1 * coef) / coef
-    const d2r = Math.round(d2 * coef) / coef
+
+    let coef = 10
+    let d1r = d1
+    let d2r = d2
+    d1r = Math.round(d1 * coef) / coef
+    d2r = Math.round(d2 * coef) / coef
 
     if (d1r <= 0) {
       if (d2r <= 0) {
@@ -82,16 +86,24 @@ function clip(plane: Plane, poly: vec3[]) {
 }
 
 export function brushToHull(brush: Brush) {
-  if (brush.sides.length == 0)
-    return []
+  const DEFAULT_SIZE = 100_000
 
-  const DEFAULT_SIZE = 1_000_000
-
+  const boundsPlanes = boundsToPlanes(brush.bounds)
   const planes: Plane[] = [
-    ...boundsToPlanes(brush.bounds),
+    ...boundsPlanes,
     ...brush.sides.map(side => side.plane)
   ]
-  const polies: vec3[][] = planes.map(plane => planeToPoly(plane, DEFAULT_SIZE))
+  // const polies = planes.map(plane => planeToPoly(plane, DEFAULT_SIZE + plane.d))
+  const polies: vec3[][] = []
+  for (let i = 0; i < planes.length; i++) {
+    const plane = planes[i]
+    if (plane == undefined) {
+      return []
+    }
+    // assert(plane !== undefined, `plane undefined ${brush.n}`)
+    const poly = planeToPoly(plane, DEFAULT_SIZE + plane.d)
+    polies.push(poly)
+  }
 
   let temp: vec3[]
   return polies.map(poly => {

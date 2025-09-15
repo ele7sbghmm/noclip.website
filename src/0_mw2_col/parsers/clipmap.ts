@@ -70,7 +70,7 @@ export class Clipmap {
       this.planes = Array.from({ length: planeCount }, () => Plane.parse(r))
     } else {
       const og = r.offs
-      r.seek(ptrs[1])
+      r.seek(ptrs[0])
       this.planes = Array.from({ length: planeCount }, () => Plane.parse(r))
       r.seek(og)
     }
@@ -114,6 +114,7 @@ export class Clipmap {
       let index = (brush.sidePtr - brushSidePtrsBase) / 8
       const sides = Array.from({ length: brush.numsides }, () => index++)
       return new Brush(
+        i,
         sides.map(ptr => this.brushSides[ptr]),
         index,
         this.brushBounds[i],
@@ -126,7 +127,7 @@ export class Clipmap {
 
 export class Brush {
   static SIZE = 0x24
-  constructor(public sides: BrushSide[], public sideIndex: number, public bounds: Bounds, public contents: number) { }
+  constructor(public n: number, public sides: BrushSide[], public sideIndex: number, public bounds: Bounds, public contents: number) { }
   static parse(cm: Clipmap, r: Reader) {
     const numsides = r.u16()
     const glassPieceIndex = r.u16()
@@ -156,9 +157,11 @@ class BrushSide {
 
 export class Plane {
   static SIZE = 0x14
-  constructor(public n: vec3, public d: number, t: number) { }
+  constructor(public n: vec3, public d: number, public t: number) { }
   static parse(r: Reader): Plane {
-    const plane = new Plane(vec3.fromValues(r.f32(), r.f32(), r.f32()), r.f32(), r.u8())
+    const rnd = 6
+    const plane = new Plane(vec3.fromValues(r.f32r(rnd), r.f32r(rnd), r.f32r(rnd)), r.f32r(rnd), r.u8())
+    // const plane = new Plane(vec3.fromValues(r.f32(), r.f32(), r.f32()), r.f32(), r.u8())
     r.seekCur(3)
     return plane
   }
@@ -168,9 +171,10 @@ export class Bounds {
   static SIZE = 0x8
   constructor(public mid: vec3, public half: vec3) { }
   static parse(r: Reader) {
+    const rnd = 6
     return new Bounds(
-      vec3.fromValues(r.f32(), r.f32(), r.f32()),
-      vec3.fromValues(r.f32(), r.f32(), r.f32())
+      vec3.fromValues(r.f32r(rnd), r.f32r(rnd), r.f32r(rnd)),
+      vec3.fromValues(r.f32r(rnd), r.f32r(rnd), r.f32r(rnd))
     )
   }
 }

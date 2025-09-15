@@ -25,9 +25,8 @@ export class ClipmapRenderer {
   brushRenderer: BrushRenderer
   triSoupRenderer: TriSoupRenderer
 
-  constructor(device: GfxDevice, renderCache: GfxRenderCache, cm: Clipmap) {
-    const mask = 0b00000000_00000001_00000000_00000000
-    this.brushRenderer = new BrushRenderer(device, renderCache, cm.brushes, mask)
+  constructor(device: GfxDevice, renderCache: GfxRenderCache, cm: Clipmap, brushMask: number) {
+    this.brushRenderer = new BrushRenderer(device, renderCache, cm.brushes, brushMask)
     this.triSoupRenderer = new TriSoupRenderer(device, renderCache, cm)
   }
   destroy(device: GfxDevice) {
@@ -117,11 +116,22 @@ class BrushRenderer {
   inputLayout: GfxInputLayout
 
   constructor(device: GfxDevice, renderCache: GfxRenderCache, brushes: Brush[], bitMask: number) {
-    const hasSides = brushes.filter(brush => brush.sides.length > 0)
-    const masked = hasSides.filter(brush => brush.contents & bitMask)
-    const hulls = masked.map(brush => brushToHull(brush))
+    // bitMask = 0b11101111_11111111_11111111_11111111
+    // bitMask = 0xffffffff
+    bitMask = 0
+    bitMask |= 1 << 0
+    // bitMask |= 1 << 1
+    bitMask |= 1 << 16
+    // bitMask |= 1 << 24
+    // bitMask |= 1 << 27
+
+    // brushes = brushes.slice(0, 6)
+    // brushes = brushes.filter(brush => brush.sides.length > 0)
+    brushes = brushes.filter(brush => brush.contents & bitMask)
+    const hulls = brushes.map(brush => brushToHull(brush))
     const trifans = hulls.map(hull => hull.map(poly => triFanToTris(poly)))
     const tris = doubleSided(trifans.flat().flat())
+    // const tris = trifans.flat().flat()
     const nrms = vToVn(tris)
 
     const cb = new Uint32Array(Array.from({ length: tris.length }, () => 0xff666666))

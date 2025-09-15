@@ -31,6 +31,10 @@ export class Reader {
       .decode(new DataView(this.view.buffer, this.offs - len, len))
       .replace(/\x00/g, '')
   }
+  f32r(r: number, le: boolean = true) {
+    const n = r ? Math.pow(10, r) : 1
+    return Math.round(this.f32(le) * n) / n
+  }
   f32(le: boolean = true) {
     this.offs += 4
     return this.view.getFloat32(this.offs - 4, le)

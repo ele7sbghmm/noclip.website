@@ -13,10 +13,11 @@ export class Scene {
   constructor(device: GfxDevice, renderCache: GfxRenderCache, data: ArrayBufferSlice, ptrs: number[]) {
     const r = new Reader(data)
 
-    r.seek(ptrs[0])
+    r.seek(ptrs[1])
     const cm = new Clipmap(r, ptrs)
 
-    this.cm = new ClipmapRenderer(device, renderCache, cm)
+    const brushBitMask = 0
+    this.cm = new ClipmapRenderer(device, renderCache, cm, brushBitMask)
   }
   destroy(device: GfxDevice) {
     this.cm.destroy(device)
