@@ -15,11 +15,10 @@ class SceneDesc implements Viewer.SceneDesc {
   }
 }
 
-const id = 'simpsons fence col'
-const name = 'simpsons fence col'
-const base = 'sharTexture'
+const id = 'shar collisions'
+const name = 'shar collisions'
 const paths: Record<string, string[]> = {
-  'camset': [ 'camset.p3d' ],
+  'camset': ['camset.p3d'],
   'Level 1': [
     'L1_TERRA.p3d',
     'l1i00.p3d',
@@ -140,16 +139,16 @@ const paths: Record<string, string[]> = {
 }
 
 const sceneDescs = [
-  new SceneDesc('camset', 'Cam set', 'sharTexture/art__/frontend/scrooby/resource/pure3d'),
-  new SceneDesc('Level 1', 'Suburbs Day', 'sharTexture/art__'),
-  new SceneDesc('Level 2', 'Downtown Day', 'sharTexture/art__'),
-  new SceneDesc('Level 3', 'Seaside Sunset', 'sharTexture/art__'),
-  new SceneDesc('Level 4', 'Suburbs Night', 'sharTexture/art__'),
-  new SceneDesc('Level 5', 'Downtown Dusk', 'sharTexture/art__'),
-  new SceneDesc('Level 6', 'Seaside Twilight', 'sharTexture/art__'),
-  new SceneDesc('Level 7', 'Suburbs Halloween', 'sharTexture/art__'),
-  new SceneDesc('fcm', 'fcm', 'sharTexture/fmc'),
-  new SceneDesc('l1z1', 'l1z1', 'sharTexture/art__'),
+  new SceneDesc('camset', 'Cam set', 'shar/art/frontend/scrooby/resource/pure3d'),
+  new SceneDesc('Level 1', 'Suburbs Day', 'shar/art'),
+  new SceneDesc('Level 2', 'Downtown Day', 'shar/art'),
+  new SceneDesc('Level 3', 'Seaside Sunset', 'shar/art'),
+  new SceneDesc('Level 4', 'Suburbs Night', 'shar/art'),
+  new SceneDesc('Level 5', 'Downtown Dusk', 'shar/art'),
+  new SceneDesc('Level 6', 'Seaside Twilight', 'shar/art'),
+  new SceneDesc('Level 7', 'Suburbs Halloween', 'shar/art'),
+  // new SceneDesc('fcm', 'fcm', 'shar/fmc'),
+  new SceneDesc('l1z1', 'l1z1', 'shar/art'),
 ]
 
 export const sceneGroup = { id, name, sceneDescs }

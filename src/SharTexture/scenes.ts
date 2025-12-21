@@ -24,7 +24,7 @@ class SceneDesc implements Viewer.SceneDesc {
 
 const id = "shar texture"
 const name = "shar texture"
-const path = 'sharTexture/art__'
+const path = 'shar/art'
 const sceneDescs = [
   
   new SceneDesc('camset', 'Cam set', path),

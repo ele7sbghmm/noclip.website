@@ -17,92 +17,92 @@ const id = 'mw2 col'
 const name = 'mw2 col'
 
 const sceneDescs = [
-  new SceneDesc('afghan', 'mp_afghan', 'mw2/english/mp_afghan.ff.release_xassets', [0x9950bf, 0x3eb6ac4]),
-  new SceneDesc('boneyard', 'mp_boneyard', 'mw2/english/mp_boneyard.ff.release_xassets', [0x75afeb, 0x331a592]),
-  // new SceneDesc('brecourt', 'mp_brecourt', 'mw2/english/mp_brecourt.ff.release_xassets', []),
-  new SceneDesc('checkpoint', 'mp_checkpoint', 'mw2/english/mp_checkpoint.ff.release_xassets', [0x63ee68, 0x5543c7c]),
-  new SceneDesc('derail', 'mp_derail', 'mw2/english/mp_derail.ff.release_xassets', [0xa23890, 0x4b1158b]),
-  new SceneDesc('estate', 'mp_estate', 'mw2/english/mp_estate.ff.release_xassets', [0x919d80, 0x43694e1]),
-  new SceneDesc('favela', 'mp_favela', 'mw2/english/mp_favela.ff.release_xassets', [0x70f6dc, 0x39ff165]),
-  new SceneDesc('highrise', 'mp_highrise', 'mw2/english/mp_highrise.ff.release_xassets', [0xd13ddf, 0x48f7a46]),
-  new SceneDesc('invasion', 'mp_invasion', 'mw2/english/mp_invasion.ff.release_xassets', [0x92a793, 0x49e0a98]),
-  new SceneDesc('nightshift', 'mp_nightshift', 'mw2/english/mp_nightshift.ff.release_xassets', [0x727a5f, 0x47ff9be]),
-  new SceneDesc('quarry', 'mp_quarry', 'mw2/english/mp_quarry.ff.release_xassets', [0x9aeddd, 0x4985830]),
-  new SceneDesc('rundown', 'mp_rundown', 'mw2/english/mp_rundown.ff.release_xassets', [0xa24e02, 0x3befe25]),
-  new SceneDesc('rust', 'mp_rust', 'mw2/english/mp_rust.ff.release_xassets', [0x2d8369, 0x397df59]),
-  new SceneDesc('subbase', 'mp_subbase', 'mw2/english/mp_subbase.ff.release_xassets', [0x948f7f, 0x3839d66]),
-  // new SceneDesc('terminal', 'mp_terminal', 'mw2/english/mp_terminal.ff.release_xassets', []),
-  // new SceneDesc('underpass', 'mp_underpass', 'mw2/english/mp_underpass.ff.release_xassets', []),
+  new SceneDesc('afghan', 'mp_afghan', 'mw2/english/mp_afghan.xassets', [0x9950bf, 0x3eb6ac4]),
+  new SceneDesc('boneyard', 'mp_boneyard', 'mw2/english/mp_boneyard.xassets', [0x75afeb, 0x331a592]),
+  // new SceneDesc('brecourt', 'mp_brecourt', 'mw2/english/mp_brecourt.xassets', []),
+  new SceneDesc('checkpoint', 'mp_checkpoint', 'mw2/english/mp_checkpoint.xassets', [0x63ee68, 0x5543c7c]),
+  new SceneDesc('derail', 'mp_derail', 'mw2/english/mp_derail.xassets', [0xa23890, 0x4b1158b]),
+  new SceneDesc('estate', 'mp_estate', 'mw2/english/mp_estate.xassets', [0x919d80, 0x43694e1]),
+  new SceneDesc('favela', 'mp_favela', 'mw2/english/mp_favela.xassets', [0x70f6dc, 0x39ff165]),
+  new SceneDesc('highrise', 'mp_highrise', 'mw2/english/mp_highrise.xassets', [0xd13ddf, 0x48f7a46]),
+  new SceneDesc('invasion', 'mp_invasion', 'mw2/english/mp_invasion.xassets', [0x92a793, 0x49e0a98]),
+  new SceneDesc('nightshift', 'mp_nightshift', 'mw2/english/mp_nightshift.xassets', [0x727a5f, 0x47ff9be]),
+  new SceneDesc('quarry', 'mp_quarry', 'mw2/english/mp_quarry.xassets', [0x9aeddd, 0x4985830]),
+  new SceneDesc('rundown', 'mp_rundown', 'mw2/english/mp_rundown.xassets', [0xa24e02, 0x3befe25]),
+  new SceneDesc('rust', 'mp_rust', 'mw2/english/mp_rust.xassets', [0x2d8369, 0x397df59]),
+  new SceneDesc('subbase', 'mp_subbase', 'mw2/english/mp_subbase.xassets', [0x948f7f, 0x3839d66]),
+  // new SceneDesc('terminal', 'mp_terminal', 'mw2/english/mp_terminal.xassets', []),
+  // new SceneDesc('underpass', 'mp_underpass', 'mw2/english/mp_underpass.xassets', []),
 ]
 export const sceneGroup = { id, name, sceneDescs }
 
 /*
-  mp_abandon.ff.release_xassets
-  mp_abandon_load.ff.release_xassets
-  mp_compact.ff.release_xassets
-  mp_compact_load.ff.release_xassets
-  mp_complex.ff.release_xassets
-  mp_complex_load.ff.release_xassets
-  mp_crash.ff.release_xassets
-  mp_crash_load.ff.release_xassets
-  mp_fuel2.ff.release_xassets
-  mp_fuel2_load.ff.release_xassets
-  mp_overgrown.ff.release_xassets
-  mp_overgrown_load.ff.release_xassets
-  mp_storm.ff.release_xassets
-  mp_storm_load.ff.release_xassets
-  mp_strike.ff.release_xassets
-  mp_strike_load.ff.release_xassets
-  mp_trailerpark.ff.release_xassets
-  mp_trailerpark_load.ff.release_xassets
-  mp_vacant.ff.release_xassets
-  mp_vacant_load.ff.release_xassets
+  mp_abandon.xassets
+  mp_abandon_load.xassets
+  mp_compact.xassets
+  mp_compact_load.xassets
+  mp_complex.xassets
+  mp_complex_load.xassets
+  mp_crash.xassets
+  mp_crash_load.xassets
+  mp_fuel2.xassets
+  mp_fuel2_load.xassets
+  mp_overgrown.xassets
+  mp_overgrown_load.xassets
+  mp_storm.xassets
+  mp_storm_load.xassets
+  mp_strike.xassets
+  mp_strike_load.xassets
+  mp_trailerpark.xassets
+  mp_trailerpark_load.xassets
+  mp_vacant.xassets
+  mp_vacant_load.xassets
 
   english/
-    code_post_gfx_mp.ff.release_xassets
-    code_pre_gfx_mp.ff.release_xassets
-    common_mp.ff.release_xassets
-    dlc1_ui_mp.ff.release_xassets
-    dlc2_ui_mp.ff.release_xassets
-    localized_code_post_gfx_mp.ff.release_xassets
-    localized_code_pre_gfx_mp.ff.release_xassets
-    localized_common_mp.ff.release_xassets
-    localized_ui_mp.ff.release_xassets
-    mp_afghan.ff.release_xassets
-    mp_afghan_load.ff.release_xassets
-    mp_boneyard.ff.release_xassets
-    mp_boneyard_load.ff.release_xassets
-    mp_brecourt.ff.release_xassets
-    mp_brecourt_load.ff.release_xassets
-    mp_checkpoint.ff.release_xassets
-    mp_checkpoint_load.ff.release_xassets
-    mp_derail.ff.release_xassets
-    mp_derail_load.ff.release_xassets
-    mp_estate.ff.release_xassets
-    mp_estate_load.ff.release_xassets
-    mp_favela.ff.release_xassets
-    mp_favela_load.ff.release_xassets
-    mp_highrise.ff.release_xassets
-    mp_highrise_load.ff.release_xassets
-    mp_invasion.ff.release_xassets
-    mp_invasion_load.ff.release_xassets
-    mp_nightshift.ff.release_xassets
-    mp_nightshift_load.ff.release_xassets
-    mp_quarry.ff.release_xassets
-    mp_quarry_load.ff.release_xassets
-    mp_rundown.ff.release_xassets
-    mp_rundown_load.ff.release_xassets
-    mp_rust.ff.release_xassets
-    mp_rust_load.ff.release_xassets
-    mp_subbase.ff.release_xassets
-    mp_subbase_load.ff.release_xassets
-    mp_terminal.ff.release_xassets
-    mp_terminal_load.ff.release_xassets
-    mp_underpass.ff.release_xassets
-    mp_underpass_load.ff.release_xassets
-    patch_code_pre_gfx_mp.ff.release_xassets
-    patch_mp.ff.release_xassets
-    ui_mp.ff.release_xassets
+    code_post_gfx_mp.xassets
+    code_pre_gfx_mp.xassets
+    common_mp.xassets
+    dlc1_ui_mp.xassets
+    dlc2_ui_mp.xassets
+    localized_code_post_gfx_mp.xassets
+    localized_code_pre_gfx_mp.xassets
+    localized_common_mp.xassets
+    localized_ui_mp.xassets
+    mp_afghan.xassets
+    mp_afghan_load.xassets
+    mp_boneyard.xassets
+    mp_boneyard_load.xassets
+    mp_brecourt.xassets
+    mp_brecourt_load.xassets
+    mp_checkpoint.xassets
+    mp_checkpoint_load.xassets
+    mp_derail.xassets
+    mp_derail_load.xassets
+    mp_estate.xassets
+    mp_estate_load.xassets
+    mp_favela.xassets
+    mp_favela_load.xassets
+    mp_highrise.xassets
+    mp_highrise_load.xassets
+    mp_invasion.xassets
+    mp_invasion_load.xassets
+    mp_nightshift.xassets
+    mp_nightshift_load.xassets
+    mp_quarry.xassets
+    mp_quarry_load.xassets
+    mp_rundown.xassets
+    mp_rundown_load.xassets
+    mp_rust.xassets
+    mp_rust_load.xassets
+    mp_subbase.xassets
+    mp_subbase_load.xassets
+    mp_terminal.xassets
+    mp_terminal_load.xassets
+    mp_underpass.xassets
+    mp_underpass_load.xassets
+    patch_code_pre_gfx_mp.xassets
+    patch_mp.xassets
+    ui_mp.xassets
  */
 
 /*

@@ -116,12 +116,12 @@ class BrushRenderer {
   inputLayout: GfxInputLayout
 
   constructor(device: GfxDevice, renderCache: GfxRenderCache, brushes: Brush[], bitMask: number) {
-    // bitMask = 0b11101111_11111111_11111111_11111111
+    bitMask = 0b11101111_11111111_11111111_11111111
     // bitMask = 0xffffffff
-    bitMask = 0
-    bitMask |= 1 << 0
+    // bitMask = 0
+    // bitMask |= 1 << 0
     // bitMask |= 1 << 1
-    bitMask |= 1 << 16
+    // bitMask |= 1 << 16
     // bitMask |= 1 << 24
     // bitMask |= 1 << 27
 
